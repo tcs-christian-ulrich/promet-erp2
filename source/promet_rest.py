@@ -44,17 +44,16 @@ def before_request():
             logging.debug('OPTIONS bottle.request special header: ' + specific_header)
             bottle.response.headers['Access-Control-bottle.request-Headers'] = specific_header
             bottle.response.headers['Access-Control-Allow-Methods'] = ', '.join(ALLOWED_METHODS)
-            response = bottle.make_response('', 200, headers)
-            return response
+            bottle.response.status = 200
+            return
         else:
             s = itsdangerous.Signer(bottle.secret_key)
-            response.headers['WWW-Authenticate'] = 'Promet login_url=' + \
-                urllib.parse.urljoin(bottle.request.url_root,
-                URI_BEGINNING_PATH['authorization']) + '?sig=' + \
-                s.get_signature(origin) + '{&back_url,origin}'
-            response = bottle.make_response('', 401, headers)
-            # do not handle the bottle.request if not authorized
-            return response
+            bottle.response.headers['WWW-Authenticate'] = 'Promet login_url=%s?sig=%s{&back_url,origin}' % (
+                urllib.parse.urljoin(bottle.request.urlparts[1], URI_BEGINNING_PATH['authorization']),
+                s.get_signature(origin)
+            )
+            bottle.response.status = 401
+            return
         bottle.response.status = status_code
 @bottle.get('/<dataset>')
 def list_handler(dataset):
