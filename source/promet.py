@@ -1,4 +1,4 @@
-import logging,warnings,sys
+import logging,warnings,sys,pathlib,os
 from typing import Text
 from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
 from sqlalchemy.ext.declarative import declarative_base
@@ -310,7 +310,22 @@ def GetID(session):
         logging.error(str(e))
         nid=None
     return nid
-def GetConnection(ConnStr):
+def GetConfigPath(appname='prometerp'):
+    if 'APPDATA' in os.environ:
+        confighome = os.environ['APPDATA']
+    elif 'XDG_CONFIG_HOME' in os.environ:
+        confighome = os.environ['XDG_CONFIG_HOME']
+    else:
+        confighome = os.path.join(os.environ['HOME'], '.config')
+    return os.path.join(confighome, appname)
+def GetConnection(ConnStr=None,Mandant=None):
+    if not ConnStr:
+        if not Mandant:
+            mc = 0
+            for connFile in pathlib.Path(GetConfigPath).glob('*.perml'):
+                mc += 1
+            if mc == 1:
+                Mandant = os.path.basename(connFile)
     try:
         engine = create_engine(ConnStr)
         engine.convert_unicode = True

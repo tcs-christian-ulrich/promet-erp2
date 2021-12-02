@@ -1,16 +1,33 @@
-import bottle,logging,itsdangerous,urllib,os
+import threading
+import bottle,logging,urllib,os,uuid,webapp,promet,time
+from webapp.webapp import SessionElement
 ALLOWED_METHODS = ['GET', 'PUT', 'PROPFIND', 'PROPPATCH', 'MKCOL', 'DELETE',
                    'COPY', 'MOVE', 'OPTIONS']
 URI_BEGINNING_PATH = {
     'redirection': '/redirect/',
     'authorization': '/login/',
     'system': '/system/',
-    'webdav': '/',
+    'webdav': '/dav/',
     'links': '/'
 }
 bottle.secret_key = os.urandom(24)
 def is_authorized():
     return False
+@bottle.get(URI_BEGINNING_PATH['webdav'])
+@bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>')
+def list_handler(dataset=None):
+    pass
+@bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>')
+def load_handler(dataset,sql_id):
+    pass
+@bottle.route(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>', method=['PUT', 'POST'])
+def save_handler():
+    '''Handles name listing'''
+    pass
+@bottle.delete(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>')
+def delete_handler(name):
+    '''Handles name deletions'''
+    pass
 @bottle.hook('before_request')
 def before_request():
     """
@@ -22,7 +39,6 @@ def before_request():
     """
     if bottle.request.path.startswith(URI_BEGINNING_PATH['webdav']):
         response = None
-
         bottle.response.headers['Access-Control-Max-Age'] = '3600'
         bottle.response.headers['Access-Control-Allow-Credentials'] = 'true'
         bottle.response.headers['Access-Control-Allow-Headers'] = \
@@ -33,39 +49,34 @@ def before_request():
             'Content-Type, Last-Modified, WWW-Authenticate'
         origin = bottle.request.headers.get('Origin')
         bottle.response.headers['Access-Control-Allow-Origin'] = origin
-
-        specific_header = bottle.request.headers.get('Access-Control-bottle.request-Headers')
-
-        if is_authorized():
+        session = webapp.Session(bottle.request.headers.get('Access-Control-request-Headers'))
+        if session.is_authorized(bottle.request.auth):
             status_code = 200
-
-        elif bottle.request.method == 'OPTIONS' and specific_header:
+        elif bottle.request.method == 'OPTIONS' and session.sid:
             # tells the world we do CORS when authorized
-            logging.debug('OPTIONS bottle.request special header: ' + specific_header)
-            bottle.response.headers['Access-Control-bottle.request-Headers'] = specific_header
+            bottle.response.headers['Access-Control-request-Headers'] = session.sid
             bottle.response.headers['Access-Control-Allow-Methods'] = ', '.join(ALLOWED_METHODS)
             bottle.response.status = 200
             return
         else:
-            s = itsdangerous.Signer(bottle.secret_key)
-            bottle.response.headers['WWW-Authenticate'] = 'Promet login_url=%s?sig=%s{&back_url,origin}' % (
-                urllib.parse.urljoin(bottle.request.urlparts[1], URI_BEGINNING_PATH['authorization']),
-                s.get_signature(origin)
-            )
+            bottle.response.headers['WWW-Authenticate'] = 'Basic realm="Promet-ERP"'
+            bottle.response.headers['Access-Control-request-Headers'] = session.sid
             bottle.response.status = 401
             return
         bottle.response.status = status_code
-@bottle.get('/<dataset>')
-def list_handler(dataset):
-    pass
-@bottle.get('/<dataset>/<sql_id>')
-def load_handler(dataset,sql_id):
-    pass
-@bottle.route('/<dataset>/<sql_id>', method=['PUT', 'POST'])
-def save_handler():
-    '''Handles name listing'''
-    pass
-@bottle.delete('/<dataset>/<sql_id>')
-def delete_handler(name):
-    '''Handles name deletions'''
-    pass
+class PrometSessionElement(webapp.SessionElement):
+    def __init__(self) -> None:
+        super().__init__()
+        self.Connection = None
+        def CreateConnection():
+            self.Connection = promet.GetConnection()
+        threading.Thread(target=CreateConnection)
+    def WaitforConnection():
+        for i in range(500):
+            if self.Connection:
+                break
+            time.sleep(0.1)
+    def is_authorized(user,password):
+        WaitforConnection()
+        return False
+webapp.CustomSessionElement(PrometSessionElement)

@@ -1,3 +1,2 @@
-sqlalchemy
-bottle
-itsdangerous
+-r webapp/requirements.txt
+sqlalchemy>=1.4
