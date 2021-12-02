@@ -322,10 +322,26 @@ def GetConnection(ConnStr=None,Mandant=None):
     if not ConnStr:
         if not Mandant:
             mc = 0
-            for connFile in pathlib.Path(GetConfigPath).glob('*.perml'):
+            for connFile in pathlib.Path(GetConfigPath()).glob('*.perml'):
                 mc += 1
             if mc == 1:
-                Mandant = os.path.basename(connFile)
+                Mandant = os.path.basename(connFile)[:-6]
+        if Mandant:
+            with open(str(pathlib.Path(GetConfigPath()) / (Mandant+'.perml')),'r') as f:
+                tmp = f.readline()
+                if tmp.startswith('SQL'):
+                    tmp = f.readline().replace('\n','').split(';')
+                if ':' in tmp[1]:
+                    aport = tmp[1].split(':')[1]
+                    ahost = tmp[1].split(':')[0]
+                else:
+                    aport = '5433'
+                    ahost = tmp[1]
+                apasswd = tmp[4]
+                if apasswd[:1] == 'x':
+                    return None #encryptedt passwd
+                if tmp[0].startswith('postgresql'):
+                    ConnStr = 'postgresql+psycopg2://%s:%s@/%s?host=%s&port=%s' % (tmp[3],urllib.parse.quote_plus(apasswd),tmp[2],ahost,aport)
     try:
         engine = create_engine(ConnStr)
         engine.convert_unicode = True

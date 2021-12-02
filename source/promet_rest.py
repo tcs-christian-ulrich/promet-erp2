@@ -70,13 +70,13 @@ class PrometSessionElement(webapp.SessionElement):
         self.Connection = None
         def CreateConnection():
             self.Connection = promet.GetConnection()
-        threading.Thread(target=CreateConnection)
-    def WaitforConnection():
+        threading.Thread(target=CreateConnection).start()
+    def WaitforConnection(self):
         for i in range(500):
             if self.Connection:
                 break
             time.sleep(0.1)
-    def is_authorized(user,password):
-        WaitforConnection()
+    def is_authorized(self,auth):
+        self.WaitforConnection()
         return False
 webapp.CustomSessionElement(PrometSessionElement)
