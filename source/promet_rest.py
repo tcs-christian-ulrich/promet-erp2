@@ -1,5 +1,5 @@
 import threading
-import bottle,logging,urllib,os,uuid,webapp,promet,time
+import bottle,logging,urllib,os,uuid,webapp,promet,time,sqlalchemy
 from webapp.webapp import SessionElement
 ALLOWED_METHODS = ['GET', 'PUT', 'PROPFIND', 'PROPPATCH', 'MKCOL', 'DELETE',
                    'COPY', 'MOVE', 'OPTIONS']
@@ -78,5 +78,7 @@ class PrometSessionElement(webapp.SessionElement):
             time.sleep(0.1)
     def is_authorized(self,auth):
         self.WaitforConnection()
+        for user in self.Connection.query(promet.User).where(promet.User.Leaved == '').and(promet.User.LoginActive!='N').and(promet.User.Name == auth[0]).or(promet.User.LoginName == auth[0]).or(promet.User.eMail == auth[0]):
+            if user.Password
         return False
 webapp.CustomSessionElement(PrometSessionElement)

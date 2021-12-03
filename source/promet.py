@@ -17,7 +17,29 @@ with warnings.catch_warnings():
     class User(Base):
         __tablename__ = 'USERS'
         id = Column('SQL_ID',BigInteger, primary_key=True)
+        Type = Column('TYPE',String(1))
+        Parent = Column('PARENT',BigInteger)
+        AccountNo = Column('ACCOUNTNO',String(20),nullable=False);
         Name = Column('NAME',String(250), nullable=False)
+        Password = Column('PASSWORD',String(45))
+        Salt = Column('SALT',String(105))
+        IdCode = Column('IDCODE',String(4));
+        Employment = Column('EMPLOYMENT',DateTime)
+        Leaved = Column('LEAVED',DateTime)
+        CustomerNo = Column('CUSTOMERNO',String(20))
+        PersonnelNo = Column('PERSONNELNO',String(20))
+        Department = Column('DEPARTMENT',String(30))
+        Position = Column('POSITION',String(30))
+        LoginName = Column('LOGINNAME',String(30))
+        eMail = Column('EMAIL',String(100))
+        PayGroup = Column('PAYGROUP',BigInteger)
+        WorkTime = Column('WORKTIME',Integer) #8 wenn NULL
+        WeekWorkTime = Column('WEEKWORKTIME',Integer) #40 wenn NULL
+        UseWorkTime = Column('USEWORKTIME',Integer)
+        LoginActive = Column('LOGINACTIVE',String(1))
+        RemoteAccess = Column('REMOTEACCESS',String(1))
+        LastLogin = Column('LASTLOGIN',DateTime)
+        AutoSource = Column('AUTHSOURCE',String(10))
     class OrderAddress(Base,tojson.OutputMixin):
         __tablename__ = 'ORDERADDR'
         id = Column('SQL_ID',BigInteger, primary_key=True)
