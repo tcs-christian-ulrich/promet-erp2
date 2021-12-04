@@ -365,7 +365,10 @@ def GetConnection(ConnStr=None,Mandant=None):
                 if tmp[0].startswith('postgresql'):
                     ConnStr = 'postgresql+psycopg2://%s:%s@/%s?host=%s&port=%s' % (tmp[3],urllib.parse.quote_plus(apasswd),tmp[2],ahost,aport)
     try:
-        engine = create_engine(ConnStr)
+        if logging.root.level == logging.DEBUG:
+            engine = create_engine(ConnStr, echo=True, echo_pool='debug')
+        else:
+            engine = create_engine(ConnStr, echo=True, echo_pool='debug')
         engine.convert_unicode = True
         Base.metadata.create_all(engine)
         if engine:
