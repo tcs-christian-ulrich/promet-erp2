@@ -1,11 +1,11 @@
-import bottle,logging,urllib,os,uuid,webapp,promet,time,sqlalchemy,threading,datetime
+import bottle,logging,urllib,os,uuid,promet,time,sqlalchemy,threading,datetime,webapp
 ALLOWED_METHODS = ['GET', 'PUT', 'PROPFIND', 'PROPPATCH', 'MKCOL', 'DELETE',
                    'COPY', 'MOVE', 'OPTIONS']
 URI_BEGINNING_PATH = {
     'redirection': '/redirect/',
     'authorization': '/login/',
     'system': '/system/',
-    'webdav': '/dav/',
+    'webdav': '/api/v2/',
     'links': '/'
 }
 bottle.secret_key = os.urandom(24)
@@ -61,31 +61,4 @@ def before_request():
             bottle.response.status = 401
             return
         bottle.response.status = status_code
-class PrometSessionElement(webapp.SessionElement):
-    def __init__(self) -> None:
-        super().__init__()
-        self.Connection = None
-        self.User = None
-        def CreateConnection():
-            self.Connection = promet.GetConnection()
-        threading.Thread(target=CreateConnection).start()
-    def WaitforConnection(self):
-        for i in range(500):
-            if self.Connection:
-                break
-            time.sleep(0.1)
-    def is_authorized(self,auth):
-        if auth is None: return False
-        if self.User:
-            return True
-        self.WaitforConnection()
-        query = self.Connection.query(promet.User).filter(sqlalchemy.or_(promet.User.Name == auth[0],promet.User.LoginName == auth[0],promet.User.eMail == auth[0])).filter(promet.User.Leaved == None)
-        cnt = query.count()
-        if cnt == 1:
-            self.User = query.first()
-            self.User.LastLogin = datetime.datetime.now()
-            self.Connection.commit()
-            return True
-        return False
-webapp.CustomSessionElement(PrometSessionElement)
-webapp.ColoredOutput(logging.DEBUG)
+from promet_web import *
