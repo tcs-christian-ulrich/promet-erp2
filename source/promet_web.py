@@ -1,17 +1,26 @@
-import webapp,logging,promet,threading,time,datetime
+import bottle,webapp,logging,promet,threading,time,datetime
 class PrometSessionElement(webapp.SessionElement):
     def __init__(self) -> None:
         super().__init__()
         self.Connection = None
         self.User = None
+        self.LastError = None
         def CreateConnection():
-            self.Connection = promet.GetConnection()
-        threading.Thread(target=CreateConnection).start()
+            try:
+                self.Connection = promet.GetConnection()
+            except BaseException as e:
+                self.LastError = e
+        self.ConnThread = threading.Thread(target=CreateConnection).start()
     def WaitforConnection(self):
         for i in range(500):
-            if self.Connection:
-                return True
-            time.sleep(0.1)
+            if self.ConnThread.is_alive():
+                time.sleep(0.1)
+            else:
+                if self.LastError:
+                    return bottle.error(500,str(self.LastError))
+                if self.Connection:
+                    return True
+                break
         return False
     def is_authorized(self,auth):
         if auth is None: return False

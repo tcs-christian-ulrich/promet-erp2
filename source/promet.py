@@ -1,20 +1,19 @@
-import logging,warnings,sys,pathlib,os
+import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative
 from typing import Text
 from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relation, relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
 import json,tojson,threading,urllib.parse
-Base = declarative_base()
+Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-    class IDGenerator(Base):
+    class IDGenerator(Table):
         __tablename__ = 'GEN_SQL_ID'
         #id = Column('SQL_ID',BigInteger, primary_key=True, autoincrement=True)
         gid = Column('ID',BigInteger, primary_key=True)
-    class User(Base):
+    class User(Table):
         __tablename__ = 'USERS'
         id = Column('SQL_ID',BigInteger, primary_key=True)
         Type = Column('TYPE',String(1))
@@ -40,7 +39,7 @@ with warnings.catch_warnings():
         RemoteAccess = Column('REMOTEACCESS',String(1))
         LastLogin = Column('LASTLOGIN',DateTime)
         AutoSource = Column('AUTHSOURCE',String(10))
-    class OrderAddress(Base,tojson.OutputMixin):
+    class OrderAddress(Table,tojson.OutputMixin):
         __tablename__ = 'ORDERADDR'
         id = Column('SQL_ID',BigInteger, primary_key=True)
         RefId = Column('REF_ID',Integer, ForeignKey('ORDERS.SQL_ID'))
@@ -57,7 +56,7 @@ with warnings.catch_warnings():
         Postbox = Column("POBOX",Integer)
         AccountNo = Column("ACCOUNTNO",String(20))
         TimestampD = Column("TIMESTAMPD",DateTime)
-    class OrderPosition(Base,tojson.OutputMixin):
+    class OrderPosition(Table,tojson.OutputMixin):
         __tablename__ = 'ORDERPOS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -115,7 +114,7 @@ with warnings.catch_warnings():
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
-    class Order(Base,tojson.OutputMixin):
+    class Order(Table,tojson.OutputMixin):
         __tablename__ = 'ORDERS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -165,7 +164,7 @@ with warnings.catch_warnings():
         CustomerEmail=Column("EMAIL",String(200))
         Addresses = relationship(OrderAddress, lazy='joined')
         Positions = relationship(OrderPosition, lazy='joined', order_by="OrderPosition.PosNo")
-    class MasterdataPosition(Base,tojson.OutputMixin):
+    class MasterdataPosition(Table,tojson.OutputMixin):
         __tablename__ = 'MDPOSITIONS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -223,7 +222,7 @@ with warnings.catch_warnings():
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
-    class Masterdata(Base,tojson.OutputMixin):
+    class Masterdata(Table,tojson.OutputMixin):
         __tablename__ = 'MASTERDATA'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -281,7 +280,7 @@ with warnings.catch_warnings():
         PRScriptFunc=Column("PRSCRIPTFUNC",String(160))
         ImageRef=Column("IMAGEREF",Integer)
         Positions = relationship(MasterdataPosition, lazy='joined')
-    class Scripts(Base,tojson.OutputMixin):
+    class Scripts(Table,tojson.OutputMixin):
         __tablename__ = 'SCRIPTS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -302,13 +301,13 @@ with warnings.catch_warnings():
         Version=Column("VERSION",String(25))
         Active=Column("ACTIVE",String(1))
         Priority = Column("PRIORITY",Integer)
-    class Boilerplate(Base,tojson.OutputMixin):
+    class Boilerplate(Table,tojson.OutputMixin):
         __tablename__ = 'BOILERPLATE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
         Name=Column("NAME",String(100,convert_unicode=True),nullable=False)
         Text=Column("TEXT",String(convert_unicode=True))
-    class NumberRange(Base,tojson.OutputMixin):
+    class NumberRange(Table,tojson.OutputMixin):
         __tablename__ = 'NUMBERRANGES'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -328,7 +327,7 @@ def GetID(session):
         stmt = update(IDGenerator).values(gid=nid+1)
         session.execute(stmt)
         session.commit()
-    except BaseException as e:
+    except TableException as e:
         logging.error(str(e))
         nid=None
     return nid
@@ -347,7 +346,7 @@ def GetConnection(ConnStr=None,Mandant=None):
             for connFile in pathlib.Path(GetConfigPath()).glob('*.perml'):
                 mc += 1
             if mc == 1:
-                Mandant = os.path.basename(connFile)[:-6]
+                Mandant = os.path.Tablename(connFile)[:-6]
         if Mandant:
             with open(str(pathlib.Path(GetConfigPath()) / (Mandant+'.perml')),'r') as f:
                 tmp = f.readline()
@@ -364,13 +363,15 @@ def GetConnection(ConnStr=None,Mandant=None):
                     return None #encryptedt passwd
                 if tmp[0].startswith('postgresql'):
                     ConnStr = 'postgresql+psycopg2://%s:%s@/%s?host=%s&port=%s' % (tmp[3],urllib.parse.quote_plus(apasswd),tmp[2],ahost,aport)
+    if not ConnStr:
+        raise Exception('No Mandant Configuration found')
     try:
         if logging.root.level == logging.DEBUG:
             engine = create_engine(ConnStr, echo=True, echo_pool='debug')
         else:
             engine = create_engine(ConnStr, echo=True, echo_pool='debug')
         engine.convert_unicode = True
-        Base.metadata.create_all(engine)
+        Table.metadata.create_all(engine)
         if engine:
             Session = sessionmaker(bind=engine)
             session = Session()

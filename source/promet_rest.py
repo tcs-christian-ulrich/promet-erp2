@@ -1,4 +1,4 @@
-import bottle,logging,urllib,os,uuid,promet,time,sqlalchemy,threading,datetime,webapp
+import bottle,logging,urllib,os,uuid,promet,time,sqlalchemy,threading,datetime,webapp,promet
 ALLOWED_METHODS = ['GET', 'PUT', 'PROPFIND', 'PROPPATCH', 'MKCOL', 'DELETE',
                    'COPY', 'MOVE', 'OPTIONS']
 URI_BEGINNING_PATH = {
@@ -12,7 +12,11 @@ bottle.secret_key = os.urandom(24)
 @bottle.get(URI_BEGINNING_PATH['webdav'])
 @bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>')
 def list_handler(dataset=None):
-    pass
+    if dataset in promet.Table.metadata.sorted_tables:
+        pass
+    else:
+        for dataset in promet.Table.metadata.sorted_tables:
+            yield dataset
 @bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>')
 def load_handler(dataset,sql_id):
     pass
