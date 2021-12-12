@@ -337,7 +337,9 @@ def GetConfigPath(appname='prometerp'):
     elif 'XDG_CONFIG_HOME' in os.environ:
         confighome = os.environ['XDG_CONFIG_HOME']
     else:
-        confighome = os.path.join(os.environ['HOME'], '.config')
+        confighome = os.path.join(os.environ['HOME'])
+        if appname[:1] != '.':
+            appname = '.'+appname
     return os.path.join(confighome, appname)
 def GetConnection(ConnStr=None,Mandant=None):
     if not ConnStr:
@@ -346,7 +348,7 @@ def GetConnection(ConnStr=None,Mandant=None):
             for connFile in pathlib.Path(GetConfigPath()).glob('*.perml'):
                 mc += 1
             if mc == 1:
-                Mandant = os.path.Tablename(connFile)[:-6]
+                Mandant = os.path.basename(connFile)[:-6]
         if Mandant:
             with open(str(pathlib.Path(GetConfigPath()) / (Mandant+'.perml')),'r') as f:
                 tmp = f.readline()
