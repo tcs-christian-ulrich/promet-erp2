@@ -12,11 +12,13 @@ bottle.secret_key = os.urandom(24)
 @bottle.get(URI_BEGINNING_PATH['webdav'])
 @bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>')
 def list_handler(dataset=None):
-    if dataset in promet.Table.metadata.sorted_tables:
-        pass
-    else:
-        for dataset in promet.Table.metadata.sorted_tables:
-            yield dataset
+    session = webapp.Session(bottle.response.headers.get('Access-Control-request-Headers'))
+    if session.User:
+        if dataset in promet.Table.metadata.sorted_tables:
+            pass
+        else:
+            for dataset in promet.Table.metadata.sorted_tables:
+                yield dataset
 @bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>')
 def load_handler(dataset,sql_id):
     pass
@@ -59,10 +61,12 @@ def before_request():
             bottle.response.headers['Access-Control-Allow-Methods'] = ', '.join(ALLOWED_METHODS)
             bottle.response.status = 200
             return
-        else:
+        elif session.Connection is not None:
             bottle.response.headers['WWW-Authenticate'] = 'Basic realm="Promet-ERP"'
             bottle.response.headers['Access-Control-request-Headers'] = session.sid
             bottle.response.status = 401
-            return
+            return bottle.response
+        else: 
+            return bottle.abort(500,text='Connection not/wrong configured')
         bottle.response.status = status_code
 from promet_web import *
