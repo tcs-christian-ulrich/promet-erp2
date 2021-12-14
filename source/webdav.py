@@ -1,58 +1,17 @@
-# _*_ coding:utf-8 _*_
-
-#   Tiny WebDav Server for Pythonista - IOS.  (Base on pandav WebDav server )
-#
-#   (C)2013/11                                        By: Lai ChuJiang
-#
-#  this code can run not just Pythonista on IOS ,also run on OSX python.
-#  Support Client: Windows / OSX / other Webdav client for IOS,etc : goodreader / iWorks for ios 
-#
-# 20170907 Change Log:
-#  1. Fix Coda WebDav access problem.(because Coda WebDav all xml item add xmlns="DAV:".)
-# 
-# 2013/11  Change Log:
-# 1. Combind all files to one file,so can using for Pythonista easy.
-# 2. Add MKCOL(Create dir); MOVE(rename file);  DELETE(delete file or dir);  COPY (Copy file)   
-# 3. Change some decode, Now it's can support Chinese.
-# 4. Pythonista(For IOS) not dircache module ,so change code,don't using this module.
-# 5. change DAV version from 1 to 2, so the OSX finder can write.   
-# 6. for DAV version 2 support , add LOCK / UNLOCK fake support. (not real lock file)
-#       *** !!!! So Don't using > 1 client sametime write or delete same file. maybe lost files.
-# 7. Change the do_PROPFIND module, now it's simply & right for OSX 
-# 8. Change the do_GET module, now support RANGE
-# 9. Change the do_PUB module, add Content-Length=0 support (create empty file) ,so the OSX Finder support. 
-#        *if not add empty file,the Finder copy files and then delete all this.
-#10. Add WebDav Basic Auth function,now you can set user & passwd
-#         **using wdusers.conf file (just user:passwd), if not this file ,the Auth disable.
-#11. Fix the broken pipe error message
-#
-#   WebDav RFC: http://www.ics.uci.edu/~ejw/authoring/protocol/rfc2518.html
-#                   http://restpatterns.org/HTTP_Methods
-#
-# Base : pandav v0.2 
-# Copyright (c) 2005.-2006. Ivan Voras <ivoras@gmail.com>
-# Released under the Artistic License
-#
-
-#from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-#from SocketServer import ThreadingMixIn
-#from StringIO import StringIO
-import sys,urllib,re,urlparse
+import sys,urllib,re,urllib.parse
 from time import time, timezone, strftime, localtime, gmtime
-import os, shutil, uuid, md5, mimetypes, base64
+import os, shutil, uuid, hashlib, mimetypes, base64
 
 class Member:
     M_MEMBER = 1           
     M_COLLECTION = 2        
     def getProperties(self):
         return {}  
-
 class Collection(Member):
     def __init__(self, name):
         self.name = name
     def getMembers(self):
         return []
-        
 class FileMember(Member):
     def __init__(self, name, parent):
         self.name = name
@@ -73,7 +32,7 @@ class FileMember(Member):
         p['creationdate'] = unixdate2iso8601(st.st_ctime)
         p['getlastmodified'] = unixdate2httpdate(st.st_mtime)
         p['displayname'] = self.name
-        p['getetag'] = md5.new(self.fsname).hexdigest()
+        p['getetag'] = hashlib.md5(self.fsname).hexdigest()
         if self.type == Member.M_MEMBER:
             p['getcontentlength'] = st.st_size
             p['getcontenttype'], z = mimetypes.guess_type(self.name)
@@ -113,7 +72,6 @@ class FileMember(Member):
             writ += len(buf)
             wfile.write(buf)
         f.close()
-
 class DirCollection(FileMember, Collection):
     COLLECTION_MIME_TYPE = 'httpd/unix-directory'           # application/x-collection ？
     def __init__(self, fsdir, virdir, parent=None):
@@ -223,15 +181,12 @@ class DirCollection(FileMember, Collection):
                 if size != -1 and writ >= size:
                     break
         f.close()
-
 def unixdate2iso8601(d):
     tz = timezone / 3600 # can it be fractional?
     tz = '%+03d' % tz
     return strftime('%Y-%m-%dT%H:%M:%S', localtime(d)) + tz + ':00'
-
 def unixdate2httpdate(d):
     return strftime('%a, %d %b %Y %H:%M:%S GMT', gmtime(d))
-  
 class Tag:
     def __init__(self, name, attrs, data='', parser=None):
         self.d = {}
@@ -297,7 +252,6 @@ class Tag:
         else:
             self.d[tag.name] = tag
         return tag
-
 class XMLDict_Parser:
     def __init__(self, xml):
         self.xml = xml
@@ -368,19 +322,20 @@ class XMLDict_Parser:
                 dtag.addChild(Tag(tag[:-1], attrs, parser=self))
                 continue
             self.processTag(dtag.addChild(Tag(tag, attrs, parser=self)))
-
 def splitattrs(att):
     """Extracts name="value" pairs from string; returns them as dictionary"""
     d = {}
     for m in re.findall('([a-zA-Z_][a-zA-Z_:0-9]*?)="(.+?)"', att):
         d[m[0]] = m[1]
     return d
-
 def builddict(xml):
     """Wrapper function for straightforward parsing"""
     p = XMLDict_Parser(xml)
     return p.builddict()
-  
+
+
+
+"""
 class DAVRequestHandler(BaseHTTPRequestHandler):
     server_version = "Promet-ERP"
     all_props = ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcontenttype',
@@ -679,7 +634,7 @@ class DAVRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def split_path(self, path):
-        """Splits path string in form '/dir1/dir2/file' into parts"""
+        #Splits path string in form '/dir1/dir2/file' into parts
         p = path.split('/')[1:]
         while p and p[-1] in ('','/'):
            p = p[:-1]
@@ -688,7 +643,7 @@ class DAVRequestHandler(BaseHTTPRequestHandler):
         return p
 
     def path_elem(self):
-        """Returns split path (see split_path()) and Member object of the last element"""
+        #Returns split path (see split_path()) and Member object of the last element
         path = self.split_path(urllib.unquote(self.path))
         elem = self.server.root
         for e in path:
@@ -698,7 +653,7 @@ class DAVRequestHandler(BaseHTTPRequestHandler):
         return (path, elem)
 
     def path_elem_prev(self):
-        """Returns split path (see split_path()) and Member object of the next-to-last element"""
+        #Returns split path (see split_path()) and Member object of the next-to-last element
         path = self.split_path(urllib.unquote(self.path))
         elem = self.server.root
         for e in path[:-1]:
@@ -772,3 +727,4 @@ if __name__ == '__main__':
     root = DirCollection('./../', '/')
     httpd = DAVServer(server_address, DAVRequestHandler, root, userpwd)
     httpd.serve_forever()       # todo: add some control over starting and stopping the server
+"""

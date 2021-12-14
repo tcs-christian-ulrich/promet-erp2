@@ -1,6 +1,6 @@
 import bottle
 app = bottle.app()
-import promet_rest
+import traceserver.source.prometerp.source.promet_dav as promet_dav
 @bottle.get('/')
 @bottle.get('/index.html')
 @bottle.get('/<filepath>')
