@@ -19,7 +19,7 @@ class PrometSessionElement(webapp.SessionElement):
                 pass
             else:
                 if self.LastError:
-                    return bottle.error(500,str(self.LastError))
+                    return bottle.error(str(self.LastError))
                 if self.Connection:
                     return True
                 break

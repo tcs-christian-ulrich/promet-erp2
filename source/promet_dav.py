@@ -2,15 +2,11 @@ import bottle,logging,urllib,os,uuid,promet,time,sqlalchemy,threading,datetime,w
 ALLOWED_METHODS = ['GET', 'PUT', 'PROPFIND', 'PROPPATCH', 'MKCOL', 'DELETE',
                    'COPY', 'MOVE', 'OPTIONS']
 URI_BEGINNING_PATH = {
-    'redirection': '/redirect/',
-    'authorization': '/login/',
-    'system': '/system/',
-    'webdav': '/api/v2/',
-    'links': '/'
+    'webdav': '/api/v2',
 }
 bottle.secret_key = os.urandom(24)
-@bottle.get(URI_BEGINNING_PATH['webdav'])
-@bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>')
+@bottle.route(URI_BEGINNING_PATH['webdav'], method=['GET', 'OPTIONS'])
+@bottle.route(URI_BEGINNING_PATH['webdav']+'/<dataset>', method=['GET', 'OPTIONS'])
 def list_handler(dataset=None):
     session = webapp.Session(bottle.response.headers.get('Access-Control-request-Headers'))
     if session.User:
@@ -20,14 +16,14 @@ def list_handler(dataset=None):
             for dataset in promet.Table.metadata.sorted_tables:
                 if isinstance(dataset,promet.EnumeratableTable):
                     yield str(dataset)+'\n'
-@bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>')
+@bottle.get(URI_BEGINNING_PATH['webdav']+'/<dataset>/<sql_id>')
 def load_handler(dataset,sql_id):
     pass
-@bottle.route(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>', method=['PUT', 'POST'])
+@bottle.route(URI_BEGINNING_PATH['webdav']+'/<dataset>/<sql_id>', method=['PUT', 'POST'])
 def save_handler():
     '''Handles name listing'''
     pass
-@bottle.delete(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>')
+@bottle.delete(URI_BEGINNING_PATH['webdav']+'/<dataset>/<sql_id>')
 def delete_handler(name):
     '''Handles name deletions'''
     pass
@@ -40,7 +36,7 @@ def before_request():
        and filter unauthorized bottle.requests!
        * prepare bottle.response to OPTIONS bottle.request on webdav
     """
-    if bottle.request.path.startswith(URI_BEGINNING_PATH['webdav']):
+    if bottle.request.path.startswith(URI_BEGINNING_PATH['webdav'][:-1]):
         response = None
         bottle.response.headers['Access-Control-Max-Age'] = '3600'
         bottle.response.headers['Access-Control-Allow-Credentials'] = 'true'
