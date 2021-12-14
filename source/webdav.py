@@ -213,7 +213,7 @@ class Tag:
         del self.d[key]
 
     def __iter__(self):
-        return self.d.iterkeys()
+        return self.d.__iter__()
 
     def __contains__(self, key):
         return key in self.d
@@ -354,7 +354,8 @@ def method_not_allowed(old_res):
                 wished_all = True
             else:
                 wished_props = []
-                for prop in d['propfind']['prop']:
+                pd = d['propfind']['prop']
+                for prop in pd:
                 ### 2017/9/7 Edit By LCJ , Old is [ wished_props.append(prop)  ]
                 ### for IOS Coda Webdav support ###
                      wished_props.append(prop.split(' ')[0])
