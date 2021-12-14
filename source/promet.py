@@ -9,11 +9,12 @@ Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
+    class EnumeratableTable: pass
     class IDGenerator(Table):
         __tablename__ = 'GEN_SQL_ID'
         #id = Column('SQL_ID',BigInteger, primary_key=True, autoincrement=True)
         gid = Column('ID',BigInteger, primary_key=True)
-    class User(Table):
+    class User(Table,tojson.OutputMixin,EnumeratableTable):
         __tablename__ = 'USERS'
         id = Column('SQL_ID',BigInteger, primary_key=True)
         Type = Column('TYPE',String(1))
@@ -362,6 +363,7 @@ def GetConnection(ConnStr=None,Mandant=None):
                     ahost = tmp[1]
                 apasswd = tmp[4]
                 if apasswd[:1] == 'x':
+                    logging.warning('Unsupported password encryption')
                     return None #encryptedt passwd
                 if tmp[0].startswith('postgresql'):
                     ConnStr = 'postgresql+psycopg2://%s:%s@/%s?host=%s&port=%s' % (tmp[3],urllib.parse.quote_plus(apasswd),tmp[2],ahost,aport)

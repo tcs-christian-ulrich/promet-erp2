@@ -32,7 +32,6 @@ class OutputMixin(object):
                     res[relation.key] = [i.to_dict(backref=self.__table__)
                                          for i in value]
         return res
-
     def to_json(self, rel=None):
         def extended_encoder(x):
             #if isinstance(x, datetime):

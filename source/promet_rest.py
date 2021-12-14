@@ -18,7 +18,8 @@ def list_handler(dataset=None):
             pass
         else:
             for dataset in promet.Table.metadata.sorted_tables:
-                yield dataset
+                if isinstance(dataset,promet.EnumeratableTable):
+                    yield str(dataset)+'\n'
 @bottle.get(URI_BEGINNING_PATH['webdav']+'<dataset>/<sql_id>')
 def load_handler(dataset,sql_id):
     pass

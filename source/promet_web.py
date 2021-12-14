@@ -1,4 +1,4 @@
-import bottle,webapp,logging,promet,threading,time,datetime
+import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy
 class PrometSessionElement(webapp.SessionElement):
     def __init__(self) -> None:
         super().__init__()
@@ -10,23 +10,26 @@ class PrometSessionElement(webapp.SessionElement):
                 self.Connection = promet.GetConnection()
             except BaseException as e:
                 self.LastError = e
-        self.ConnThread = threading.Thread(target=CreateConnection).start()
+        self.ConnThread = threading.Thread(target=CreateConnection)
+        self.ConnThread.start()
     def WaitforConnection(self):
         for i in range(500):
-            if self.ConnThread.is_alive():
-                time.sleep(0.1)
+            time.sleep(0.1)
+            if self.ConnThread and self.ConnThread.is_alive():
+                pass
             else:
                 if self.LastError:
                     return bottle.error(500,str(self.LastError))
                 if self.Connection:
                     return True
                 break
+            if self.Connection:
+                return True
         return False
     def is_authorized(self,auth):
-        if auth is None: return False
         if self.User:
             return True
-        if self.WaitforConnection():
+        if self.WaitforConnection() and auth:
             query = self.Connection.query(promet.User).filter(sqlalchemy.or_(promet.User.Name == auth[0],promet.User.LoginName == auth[0],promet.User.eMail == auth[0])).filter(promet.User.Leaved == None)
             cnt = query.count()
             if cnt == 1:
