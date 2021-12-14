@@ -1,6 +1,6 @@
 import sys,urllib,re,urllib.parse
 from time import time, timezone, strftime, localtime, gmtime
-import os, shutil, uuid, hashlib, mimetypes, base64
+import os, shutil, uuid, hashlib, mimetypes, base64, bottle
 
 class Member:
     M_MEMBER = 1           
@@ -333,7 +333,15 @@ def builddict(xml):
     p = XMLDict_Parser(xml)
     return p.builddict()
 
-
+app = bottle.app()
+@bottle.route('/api/<p:path>', methods=['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL'])
+def dav_query(p):
+    if p.startswith('v2'):
+        p = p[2:]
+        return 'Hello World ! '+p
+    else:
+        return None
+app.run(port=8085)
 
 """
 class DAVRequestHandler(BaseHTTPRequestHandler):
