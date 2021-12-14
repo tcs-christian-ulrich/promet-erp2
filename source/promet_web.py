@@ -1,4 +1,21 @@
 import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy
+class Member:
+    M_MEMBER = 1           
+    M_COLLECTION = 2        
+    def getProperties(self):
+        return {}  
+class Collection(Member):
+    def __init__(self, name):
+        self.name = name
+    def getMembers(self):
+        return []
+class StaticCollection(Collection):
+    def __init__(self, name) -> None:
+        Collection(self).__init__(name)
+        self.items = []
+    def getMembers(self):
+        return self.items
+root = StaticCollection('')
 class PrometSessionElement(webapp.SessionElement):
     def __init__(self) -> None:
         super().__init__()

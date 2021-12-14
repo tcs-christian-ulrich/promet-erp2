@@ -1,18 +1,7 @@
 import sys,urllib,re,urllib.parse
 from time import time, timezone, strftime, localtime, gmtime
-import os, shutil, uuid, hashlib, mimetypes, base64, bottle
-
-class Member:
-    M_MEMBER = 1           
-    M_COLLECTION = 2        
-    def getProperties(self):
-        return {}  
-class Collection(Member):
-    def __init__(self, name):
-        self.name = name
-    def getMembers(self):
-        return []
-class FileMember(Member):
+import os, shutil, uuid, hashlib, mimetypes, base64, bottle,promet_web
+class FileMember(promet_web.Member):
     def __init__(self, name, parent):
         self.name = name
         self.parent = parent
@@ -72,7 +61,7 @@ class FileMember(Member):
             writ += len(buf)
             wfile.write(buf)
         f.close()
-class DirCollection(FileMember, Collection):
+class DirCollection(FileMember, promet_web.Collection):
     COLLECTION_MIME_TYPE = 'httpd/unix-directory'           # application/x-collection ？
     def __init__(self, fsdir, virdir, parent=None):
         if not os.path.exists(fsdir):
@@ -334,11 +323,96 @@ def builddict(xml):
     return p.builddict()
 
 app = bottle.app()
-@bottle.route('/api/<p:path>', methods=['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL'])
+a_all_props = ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcontenttype',
+            'contentclass', 'getcontentlanguage', 'creationdate', 'lastaccessed', 'getlastmodified',
+            'getcontentlength', 'iscollection', 'isstructureddocument', 'defaultdocument',
+            'displayname', 'isroot', 'resourcetype']
+a_basic_props = ['name', 'getcontenttype', 'getcontentlength', 'creationdate', 'iscollection']
+@bottle.error(405)
+def method_not_allowed(old_res):
+    if bottle.request.method == 'OPTIONS':
+        res = bottle.HTTPResponse()
+        res.set_header('Access-Control-Allow-Origin', '*')
+        res.headers['Allow'] = str(dav_methods)
+        res.headers['DAV']   = '1, 2'    #OSX Finder need Ver 2, if Ver 1 -- read only
+        res.headers['MS-Author-Via'] = 'DAV'
+        return res
+    elif bottle.request.method == 'PROPFIND':
+        res = bottle.HTTPResponse()
+        res.headers['Allow'] = str(dav_methods)
+        res.headers['DAV']   = '1, 2'    #OSX Finder need Ver 2, if Ver 1 -- read only
+        depth = 'infinity'
+        if 'Depth' in bottle.request.headers:
+            depth = bottle.request.headers['Depth'].lower()
+        d = builddict(bottle.request.body.read().decode())
+        wished_all = False
+        if len(d) == 0:
+            wished_props = a_basic_props
+        else:
+            if 'allprop' in d['propfind']:
+                wished_props = a_all_props
+                wished_all = True
+            else:
+                wished_props = []
+                for prop in d['propfind']['prop']:
+                ### 2017/9/7 Edit By LCJ , Old is [ wished_props.append(prop)  ]
+                ### for IOS Coda Webdav support ###
+                     wished_props.append(prop.split(' ')[0])
+        path, elem = self.path_elem()
+        if not elem:
+            if len(path) >= 1: # it's a non-existing file
+                self.send_response(404, 'Not Found')
+                self.send_header('Content-length', '0')
+                self.end_headers()
+                return
+            else:
+                elem = self.server.root     # fixup root lookups?
+        if depth != '0' and not elem:   #or elem.type != Member.M_COLLECTION:
+            self.send_response(406, 'This is not allowed')
+            self.send_header('Content-length', '0')
+            self.end_headers()
+            return
+        self.send_response(207, 'Multi-Status')          #Multi-Status
+        self.send_header('Content-Type', 'text/xml')
+        self.send_header("charset",'"utf-8"')        
+        # !!! if need debug output xml info,please set last var from False to True. 
+        w = BufWriter(self.wfile, False)
+        w.write('<?xml version="1.0" encoding="utf-8" ?>\n')
+        w.write('<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">\n')
+
+        def write_props_member(w, m):
+            w.write('<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % urllib.quote(m.virname))     #add urllib.quote for chinese
+            props = m.getProperties()       # get the file or dir props 
+            # For OSX Finder : getlastmodified,getcontentlength,resourceType
+            if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):
+                sDisk = os.statvfs('/')
+                props['quota-used-bytes'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
+                props['quotaused'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
+                props['quota-available-bytes'] = sDisk.f_bavail * sDisk.f_frsize
+                props['quota'] = sDisk.f_bavail * sDisk.f_frsize                                
+            for wp in wished_props:
+                if props.has_key(wp) == False:
+                    w.write('  <D:%s/>\n' % wp)
+                else:
+                    w.write('  <D:%s>%s</D:%s>\n' % (wp, str(props[wp]), wp))
+            w.write('</D:prop>\n<D:status>HTTP/1.1 200 OK</D:status>\n</D:propstat>\n</D:response>\n')
+
+        write_props_member(w, elem)
+        if depth == '1':
+            for m in elem.getMembers():
+                write_props_member(w,m)
+        w.write('</D:multistatus>')
+        self.send_header('Content-Length', str(w.getSize()))
+        return res
+    return bottle.request.app.default_error_handler(old_res)
+dav_methods = ['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL']
+@bottle.route('/api/v2<:re:.*>', methods=dav_methods)
 def dav_query(p):
+    #p = bottle.request.path
     if p.startswith('v2'):
         p = p[2:]
-        return 'Hello World ! '+p
+        if bottle.request.method in 'OPTIONS':
+            return None
     else:
         return None
 app.run(port=8085)
@@ -375,17 +449,6 @@ class DAVRequestHandler(BaseHTTPRequestHandler):
             return True 
         else:
             return False 
-
-    def do_OPTIONS(self):
-        if self.WebAuth():
-            return 
-        self.send_response(200, DAVRequestHandler.server_version)
-        self.send_header('Allow', 'GET, HEAD, POST, PUT, DELETE, OPTIONS, PROPFIND, PROPPATCH, MKCOL, LOCK, UNLOCK, MOVE, COPY')
-        self.send_header('Content-length', '0')
-        self.send_header('X-Server-Copyright', DAVRequestHandler.server_version)
-        self.send_header('DAV', '1, 2')            #OSX Finder need Ver 2, if Ver 1 -- read only
-        self.send_header('MS-Author-Via', 'DAV')
-        self.end_headers()
 
     def do_DELETE(self):
         if self.WebAuth():
@@ -438,7 +501,6 @@ class DAVRequestHandler(BaseHTTPRequestHandler):
         self.send_response(201, "Created")
         self.send_header('Content-length', '0')
         self.end_headers()        
-
 
     def do_COPY(self):
         if self.WebAuth():
