@@ -1,3 +1,4 @@
+from inspect import getmembers
 import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy
 class Member:
     M_MEMBER = 1           
@@ -9,6 +10,11 @@ class Collection(Member):
         self.name = name
     def getMembers(self):
         return []
+    def findMember(self,name):
+        for member in self.getMembers():
+            if member.name == name:
+                return member
+        return None
 class StaticCollection(Collection):
     def __init__(self, name) -> None:
         Collection(self).__init__(name)
