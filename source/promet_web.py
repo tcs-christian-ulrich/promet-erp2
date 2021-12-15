@@ -6,8 +6,11 @@ class Member:
     def getProperties(self):
         return {}  
 class Collection(Member):
-    def __init__(self, name):
+    def __init__(self, name, parent = None):
         self.name = name
+        self.virname = name
+        self.parent = parent
+        self.type = Member.M_COLLECTION
     def getMembers(self):
         return []
     def findMember(self,name):
@@ -16,8 +19,8 @@ class Collection(Member):
                 return member
         return None
 class StaticCollection(Collection):
-    def __init__(self, name) -> None:
-        Collection(self).__init__(name)
+    def __init__(self, name, parent=None):
+        super().__init__(name, parent=parent)
         self.items = []
     def getMembers(self):
         return self.items

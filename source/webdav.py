@@ -380,25 +380,23 @@ def method_not_allowed(old_res):
         path, elem = path2elem(split_path(bottle.request.path))
         if not elem:
             if len(path) >= 1: # it's a non-existing file
-                self.send_response(404, 'Not Found')
-                self.send_header('Content-length', '0')
-                self.end_headers()
-                return
+                res.status = 404
+                return res
             else:
                 elem = promet_web.root    # fixup root lookups?
         if depth != '0' and not elem:   #or elem.type != Member.M_COLLECTION:
-            self.send_response(406, 'This is not allowed')
-            self.send_header('Content-length', '0')
-            self.end_headers()
-            return
-        self.send_response(207, 'Multi-Status')          #Multi-Status
-        self.send_header('Content-Type', 'text/xml')
-        self.send_header("charset",'"utf-8"')        
-        w.write('<?xml version="1.0" encoding="utf-8" ?>\n')
-        w.write('<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">\n')
+            res.status = 406
+            #self.send_response(406, 'This is not allowed')
+            return res
+        res.status = 207
+        #self.send_response(207, 'Multi-Status')          #Multi-Status
+        res.headers['Content-Type'] = 'text/xml'
+        res.headers['charset'] = '"utf-8"'
+        res.body += '<?xml version="1.0" encoding="utf-8" ?>\n'
+        res.body += '<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">\n'
 
-        def write_props_member(w, m):
-            w.write('<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % urllib.quote(m.virname))     #add urllib.quote for chinese
+        def write_props_member(m):
+            res.body += '<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % urllib.parse.quote(m.virname)     #add urllib.quote for chinese
             props = m.getProperties()       # get the file or dir props 
             # For OSX Finder : getlastmodified,getcontentlength,resourceType
             if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):
@@ -408,18 +406,16 @@ def method_not_allowed(old_res):
                 props['quota-available-bytes'] = sDisk.f_bavail * sDisk.f_frsize
                 props['quota'] = sDisk.f_bavail * sDisk.f_frsize                                
             for wp in wished_props:
-                if props.has_key(wp) == False:
-                    w.write('  <D:%s/>\n' % wp)
+                if not wp in props:
+                    res.body += '  <D:%s/>\n' % wp
                 else:
-                    w.write('  <D:%s>%s</D:%s>\n' % (wp, str(props[wp]), wp))
-            w.write('</D:prop>\n<D:status>HTTP/1.1 200 OK</D:status>\n</D:propstat>\n</D:response>\n')
-
-        write_props_member(w, elem)
+                    res.body += '  <D:%s>%s</D:%s>\n' % (wp, str(props[wp]), wp)
+            res.body += '</D:prop>\n<D:status>HTTP/1.1 200 OK</D:status>\n</D:propstat>\n</D:response>\n'
+        write_props_member(elem)
         if depth == '1':
             for m in elem.getMembers():
-                write_props_member(w,m)
-        w.write('</D:multistatus>')
-        self.send_header('Content-Length', str(w.getSize()))
+                write_props_member(m)
+        res.body += '</D:multistatus>'
         return res
     return bottle.request.app.default_error_handler(old_res)
 dav_methods = ['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL']
