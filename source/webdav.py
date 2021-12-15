@@ -396,7 +396,7 @@ def method_not_allowed(old_res):
         res.body += '<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">\n'
 
         def write_props_member(m):
-            res.body += '<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % urllib.parse.quote(m.virname)     #add urllib.quote for chinese
+            res.body += '<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % (dav_root+'/'+urllib.parse.quote(m.virname))     #add urllib.quote for chinese
             props = m.getProperties()       # get the file or dir props 
             # For OSX Finder : getlastmodified,getcontentlength,resourceType
             if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):

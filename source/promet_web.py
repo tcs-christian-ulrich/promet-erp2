@@ -1,15 +1,21 @@
-from inspect import getmembers
-import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy
+#from inspect import getmembers
+import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy,hashlib
 class Member:
     M_MEMBER = 1           
     M_COLLECTION = 2        
-    def getProperties(self):
-        return {}  
-class Collection(Member):
     def __init__(self, name, parent = None):
         self.name = name
         self.virname = name
         self.parent = parent
+        self.type = Member.M_COLLECTION
+    def getProperties(self):
+        p = {}  
+        p['displayname'] = self.name
+        return p
+class Collection(Member):
+    COLLECTION_MIME_TYPE = 'application/x-collection'
+    def __init__(self, name, parent = None):
+        super().__init__(name,parent=parent)
         self.type = Member.M_COLLECTION
     def getMembers(self):
         return []
@@ -18,6 +24,11 @@ class Collection(Member):
             if member.name == name:
                 return member
         return None
+    def getProperties(self):
+        p = super().getProperties()
+        p['iscollection'] = 1
+        p['getcontenttype'] = Collection.COLLECTION_MIME_TYPE
+        return p
 class StaticCollection(Collection):
     def __init__(self, name, parent=None):
         super().__init__(name, parent=parent)
