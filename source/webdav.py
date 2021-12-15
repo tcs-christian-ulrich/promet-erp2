@@ -1,6 +1,8 @@
 import sys,urllib,re,urllib.parse
 from time import time, timezone, strftime, localtime, gmtime
 import os, shutil, uuid, hashlib, mimetypes, base64, bottle,promet_web
+dav_root = '/api/v2'
+dav_methods = ['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL']
 class FileMember(promet_web.Member):
     def __init__(self, name, parent):
         self.name = name
@@ -321,25 +323,43 @@ def builddict(xml):
     """Wrapper function for straightforward parsing"""
     p = XMLDict_Parser(xml)
     return p.builddict()
-
+def split_path(path):
+    if path.startswith(dav_root):
+        path = path[len(dav_root):]
+    #Splits path string in form '/dir1/dir2/file' into parts
+    p = path.split('/')[1:]
+    while p and p[-1] in ('','/'):
+        p = p[:-1]
+        if len(p) > 0:
+            p[-1] += '/'
+    return p
+def path2elem(path):
+    #Returns split path (see split_path()) and Member object of the last element
+    elem = promet_web.root
+    for e in path:
+        elem = elem.findMember(e)
+        if elem == None:
+            break
+    return (path, elem)
 app = bottle.app()
-a_all_props = ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcontenttype',
-            'contentclass', 'getcontentlanguage', 'creationdate', 'lastaccessed', 'getlastmodified',
-            'getcontentlength', 'iscollection', 'isstructureddocument', 'defaultdocument',
-            'displayname', 'isroot', 'resourcetype']
+a_all_props =   ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcontenttype',
+                 'contentclass', 'getcontentlanguage', 'creationdate', 'lastaccessed', 'getlastmodified',
+                 'getcontentlength', 'iscollection', 'isstructureddocument', 'defaultdocument',
+                 'displayname', 'isroot', 'resourcetype']
 a_basic_props = ['name', 'getcontenttype', 'getcontentlength', 'creationdate', 'iscollection']
 @bottle.error(405)
 def method_not_allowed(old_res):
     if bottle.request.method == 'OPTIONS':
         res = bottle.HTTPResponse()
         res.set_header('Access-Control-Allow-Origin', '*')
-        res.headers['Allow'] = str(dav_methods)
+        res.headers['Allow'] = '"'+','.join(str(e) for e in dav_methods)+'"'
         res.headers['DAV']   = '1, 2'    #OSX Finder need Ver 2, if Ver 1 -- read only
         res.headers['MS-Author-Via'] = 'DAV'
+        res.status = 200
         return res
     elif bottle.request.method == 'PROPFIND':
         res = bottle.HTTPResponse()
-        res.headers['Allow'] = str(dav_methods)
+        res.headers['Allow'] = ''.join(str(e) for e in dav_methods)
         res.headers['DAV']   = '1, 2'    #OSX Finder need Ver 2, if Ver 1 -- read only
         depth = 'infinity'
         if 'Depth' in bottle.request.headers:
@@ -359,55 +379,49 @@ def method_not_allowed(old_res):
                 ### 2017/9/7 Edit By LCJ , Old is [ wished_props.append(prop)  ]
                 ### for IOS Coda Webdav support ###
                      wished_props.append(prop.split(' ')[0])
-        path, elem = self.path_elem()
+        path, elem = path2elem(split_path(bottle.request.path))
         if not elem:
             if len(path) >= 1: # it's a non-existing file
-                self.send_response(404, 'Not Found')
-                self.send_header('Content-length', '0')
-                self.end_headers()
-                return
+                res.status_code = 404
+                return res
             else:
-                elem = self.server.root     # fixup root lookups?
+                elem = promet_web.root    # fixup root lookups?
         if depth != '0' and not elem:   #or elem.type != Member.M_COLLECTION:
-            self.send_response(406, 'This is not allowed')
-            self.send_header('Content-length', '0')
-            self.end_headers()
-            return
-        self.send_response(207, 'Multi-Status')          #Multi-Status
-        self.send_header('Content-Type', 'text/xml')
-        self.send_header("charset",'"utf-8"')        
+            res.status_code = 406
+            #self.send_response(406, 'This is not allowed')
+            return res
+        res.status_code = 207
+        #self.send_response(207, 'Multi-Status')          #Multi-Status
+        res.headers['Content-Type'] = 'text/xml'
+        res.headers["charset"] = '"utf-8"'
         # !!! if need debug output xml info,please set last var from False to True. 
-        w = BufWriter(self.wfile, False)
-        w.write('<?xml version="1.0" encoding="utf-8" ?>\n')
-        w.write('<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">\n')
+        yield '<?xml version="1.0" encoding="utf-8" ?>\n'
+        yield '<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">\n'
 
         def write_props_member(w, m):
-            w.write('<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % urllib.quote(m.virname))     #add urllib.quote for chinese
+            yield '<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % urllib.quote(m.virname)     #add urllib.quote for chinese
             props = m.getProperties()       # get the file or dir props 
             # For OSX Finder : getlastmodified,getcontentlength,resourceType
-            if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):
-                sDisk = os.statvfs('/')
-                props['quota-used-bytes'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
-                props['quotaused'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
-                props['quota-available-bytes'] = sDisk.f_bavail * sDisk.f_frsize
-                props['quota'] = sDisk.f_bavail * sDisk.f_frsize                                
+            #if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):
+            #    sDisk = os.statvfs('/')
+            #    props['quota-used-bytes'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
+            #    props['quotaused'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
+            #    props['quota-available-bytes'] = sDisk.f_bavail * sDisk.f_frsize
+            #    props['quota'] = sDisk.f_bavail * sDisk.f_frsize                                
             for wp in wished_props:
                 if props.has_key(wp) == False:
-                    w.write('  <D:%s/>\n' % wp)
+                    yield '  <D:%s/>\n' % wp
                 else:
-                    w.write('  <D:%s>%s</D:%s>\n' % (wp, str(props[wp]), wp))
-            w.write('</D:prop>\n<D:status>HTTP/1.1 200 OK</D:status>\n</D:propstat>\n</D:response>\n')
-
+                    yield '  <D:%s>%s</D:%s>\n' % (wp, str(props[wp]), wp)
+            yield '</D:prop>\n<D:status>HTTP/1.1 200 OK</D:status>\n</D:propstat>\n</D:response>\n'
         write_props_member(w, elem)
         if depth == '1':
             for m in elem.getMembers():
                 write_props_member(w,m)
-        w.write('</D:multistatus>')
-        self.send_header('Content-Length', str(w.getSize()))
+        yield '</D:multistatus>'
         return res
     return bottle.request.app.default_error_handler(old_res)
-dav_methods = ['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL']
-@bottle.route('/api/v2<:re:.*>', methods=dav_methods)
+@bottle.route(dav_root+'<:re:.*>', methods=dav_methods)
 def dav_query(p):
     #p = bottle.request.path
     if p.startswith('v2'):
@@ -416,6 +430,7 @@ def dav_query(p):
             return None
     else:
         return None
+bottle.debug()
 app.run(port=8085)
 
 """
