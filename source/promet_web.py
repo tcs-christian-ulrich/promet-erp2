@@ -11,9 +11,14 @@ class Member:
     def getProperties(self):
         p = {}  
         p['displayname'] = self.name
+        if self.type == Member.M_MEMBER:
+            p['getcontentlength'] = '0'
+            p['getcontentlanguage'] = None
+        elif Member.M_COLLECTION:
+            p['resourcetype'] = '<D:collection/>'
         return p
 class Collection(Member):
-    COLLECTION_MIME_TYPE = 'application/x-collection'
+    COLLECTION_MIME_TYPE = 'httpd/unix-directory'#'application/x-collection'
     def __init__(self, name, parent = None):
         super().__init__(name,parent=parent)
         self.type = Member.M_COLLECTION

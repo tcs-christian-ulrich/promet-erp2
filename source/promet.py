@@ -5,7 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import relation, relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
 import json,threading,urllib.parse
-from . import tojson
+try: from . import tojson
+except: import tojson
 Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
 with warnings.catch_warnings():

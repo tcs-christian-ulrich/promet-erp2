@@ -1,4 +1,4 @@
-import sys,urllib,re,urllib.parse
+import sys,urllib,re,urllib.parse,logging
 from time import time, timezone, strftime, localtime, gmtime
 import os, shutil, uuid, hashlib, mimetypes, base64, bottle,promet_web
 class FileMember(promet_web.Member):
@@ -339,13 +339,15 @@ def path2elem(path):
         if elem == None:
             break
     return (path, elem)
+def serverpath(path):
+    return bottle.request.url[:bottle.request.url.find(dav_root)]+path
 app = bottle.app()
 dav_root = '/api/v2'
 a_all_props =   ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcontenttype',
                  'contentclass', 'getcontentlanguage', 'creationdate', 'lastaccessed', 'getlastmodified',
                  'getcontentlength', 'iscollection', 'isstructureddocument', 'defaultdocument',
                  'displayname', 'isroot', 'resourcetype']
-a_basic_props = ['name', 'getcontenttype', 'getcontentlength', 'creationdate', 'iscollection']
+a_basic_props = ['name', 'getcontenttype', 'getcontentlength', 'creationdate', 'iscollection', 'resourcetype']
 @bottle.error(405)
 def method_not_allowed(old_res):
     if bottle.request.method == 'OPTIONS':
@@ -392,8 +394,10 @@ def method_not_allowed(old_res):
         res.body += '<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">\n'
 
         def write_props_member(m):
-            res.body += '<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % (dav_root+'/'+urllib.parse.quote(m.virname))     #add urllib.quote for chinese
+            res.body += '<D:response>\n<D:href>%s</D:href>\n' % (serverpath(urllib.parse.quote(m.virname)))     #add urllib.quote for chinese
             props = m.getProperties()       # get the file or dir props 
+            # 200
+            res.body += '<D:propstat>\n<D:prop>\n'
             # For OSX Finder : getlastmodified,getcontentlength,resourceType
             if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):
                 sDisk = os.statvfs('.')
@@ -402,16 +406,33 @@ def method_not_allowed(old_res):
                 props['quota-available-bytes'] = sDisk.f_bavail * sDisk.f_frsize
                 props['quota'] = sDisk.f_bavail * sDisk.f_frsize                                
             for wp in wished_props:
+                if wp in props:
+                    res.body += '  <D:%s>%s</D:%s>\n' % (wp, str(props[wp]), wp)
+            res.body += '</D:prop>\n<D:status>HTTP/1.1 200 OK</D:status>\n</D:propstat>\n'
+            # 404
+            res.body += '<D:propstat>\n<D:prop>\n'
+            for wp in wished_props:
                 if not wp in props:
                     res.body += '  <D:%s/>\n' % wp
-                else:
-                    res.body += '  <D:%s>%s</D:%s>\n' % (wp, str(props[wp]), wp)
-            res.body += '</D:prop>\n<D:status>HTTP/1.1 200 OK</D:status>\n</D:propstat>\n</D:response>\n'
-        write_props_member(elem)
-        if depth == '1':
-            for m in elem.getMembers():
-                write_props_member(m)
+            res.body += '</D:prop>\n<D:status>HTTP/1.1 404 Not Found</D:status>\n</D:propstat>\n'
+            res.body += '</D:response>\n'
+        adepth = 0
+        if depth == 'infinity':
+            depth = 999999
+        else:
+            depth = int(depth)
+        actElements = [elem]
+        while (adepth < depth) and len(actElements)>0:
+            newElements = []
+            for elem in actElements:
+                for m in elem.getMembers():
+                    newElements.append(m)
+                write_props_member(elem)
+            actElements = newElements
+            adepth += 1
         res.body += '</D:multistatus>'
+        logging.debug(bottle.request.body.read().decode())
+        logging.debug(res.body)
         return res
     return bottle.request.app.default_error_handler(old_res)
 dav_methods = ['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL']
