@@ -4,7 +4,8 @@ from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, up
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relation, relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
-import json,tojson,threading,urllib.parse
+import json,threading,urllib.parse
+from . import tojson
 Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
 with warnings.catch_warnings():
