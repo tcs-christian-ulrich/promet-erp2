@@ -374,8 +374,6 @@ def method_not_allowed(old_res):
                 wished_props = []
                 pd = d['propfind']['prop']
                 for prop in pd:
-                ### 2017/9/7 Edit By LCJ , Old is [ wished_props.append(prop)  ]
-                ### for IOS Coda Webdav support ###
                      wished_props.append(prop.split(' ')[0])
         path, elem = path2elem(split_path(bottle.request.path))
         if not elem:
@@ -383,13 +381,11 @@ def method_not_allowed(old_res):
                 res.status = 404
                 return res
             else:
-                elem = promet_web.root    # fixup root lookups?
+                elem = promet_web.root 
         if depth != '0' and not elem:   #or elem.type != Member.M_COLLECTION:
             res.status = 406
-            #self.send_response(406, 'This is not allowed')
             return res
         res.status = 207
-        #self.send_response(207, 'Multi-Status')          #Multi-Status
         res.headers['Content-Type'] = 'text/xml'
         res.headers['charset'] = '"utf-8"'
         res.body += '<?xml version="1.0" encoding="utf-8" ?>\n'
@@ -400,7 +396,7 @@ def method_not_allowed(old_res):
             props = m.getProperties()       # get the file or dir props 
             # For OSX Finder : getlastmodified,getcontentlength,resourceType
             if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):
-                sDisk = os.statvfs('/')
+                sDisk = os.statvfs('.')
                 props['quota-used-bytes'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
                 props['quotaused'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
                 props['quota-available-bytes'] = sDisk.f_bavail * sDisk.f_frsize
