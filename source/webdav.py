@@ -340,7 +340,8 @@ def path2elem(path):
             break
     return (path, elem)
 def serverpath(path):
-    return bottle.request.url[:bottle.request.url.find(dav_root)]+path
+    #return bottle.request.url[:bottle.request.url.find(dav_root)]+
+    return dav_root+'/'+path
 app = bottle.app()
 dav_root = '/api/v2'
 a_all_props =   ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcontenttype',
@@ -422,7 +423,7 @@ def method_not_allowed(old_res):
         else:
             depth = int(depth)
         actElements = [elem]
-        while (adepth < depth) and len(actElements)>0:
+        while (adepth <= depth) and len(actElements)>0:
             newElements = []
             for elem in actElements:
                 for m in elem.getMembers():
