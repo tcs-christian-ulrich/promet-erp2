@@ -7,6 +7,8 @@ class Member:
         self.name = name
         self.virname = name
         self.parent = parent
+        if parent:
+            parent.append(self)
         self.type = Member.M_COLLECTION
     def getProperties(self):
         p = {}  
@@ -18,7 +20,7 @@ class Member:
             p['resourcetype'] = '<D:collection/>'
         return p
 class Collection(Member):
-    COLLECTION_MIME_TYPE = 'httpd/unix-directory'#'application/x-collection'
+    COLLECTION_MIME_TYPE = 'application/x-collection'
     def __init__(self, name, parent = None):
         super().__init__(name,parent=parent)
         self.type = Member.M_COLLECTION
@@ -40,7 +42,10 @@ class StaticCollection(Collection):
         self.items = []
     def getMembers(self):
         return self.items
+    def append(self,member):
+        self.items.append(member)
 root = StaticCollection('')
+d1 = StaticCollection('d1',root)
 class PrometSessionElement(webapp.SessionElement):
     def __init__(self) -> None:
         super().__init__()

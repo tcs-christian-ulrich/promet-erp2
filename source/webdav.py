@@ -335,7 +335,13 @@ def path2elem(path):
     #Returns split path (see split_path()) and Member object of the last element
     elem = promet_web.root
     for e in path:
-        elem = elem.findMember(e)
+        tmp = elem.findMember(e)
+        if tmp is None and e[-1:] == '/':
+            e = e[:-1] 
+            tmp = elem.findMember(e)
+            if tmp and tmp.type == promet_web.Member.M_MEMBER:
+                tmp = None
+            elem = tmp
         if elem == None:
             break
     return (path, elem)
