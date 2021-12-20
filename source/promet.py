@@ -1,4 +1,4 @@
-import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative
+import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative,hashlib
 from typing import Text
 from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
 from sqlalchemy import create_engine
@@ -41,6 +41,21 @@ with warnings.catch_warnings():
         RemoteAccess = Column('REMOTEACCESS',String(1))
         LastLogin = Column('LASTLOGIN',DateTime)
         AutoSource = Column('AUTHSOURCE',String(10))
+        def mergeSalt(self,aPasswort, aSalt):
+            Result = '';
+            for i in range(len(aPasswort)):
+                Result += aSalt[:5]
+                aSalt = aSalt[5:]
+                Result += aPasswort[:1]
+                aPasswort = aPasswort[2:]
+            return Result
+        def checkPassword(self,password):
+            if self.Password[:1] != '$':
+                Result = hashlib.md5(password.encode()).hexdigest() == self.Password
+            else:
+                aRes = '$'+hashlib.sha1(hashlib.sha1(self.mergeSalt(password,self.Salt).encode()).hexdigest().encode()).hexdigest()
+                Result = (aRes[:len(password)] == self.Password) and (len(self.Password) > 30)
+            return Result
     class OrderAddress(Table,tojson.OutputMixin):
         __tablename__ = 'ORDERADDR'
         id = Column('SQL_ID',BigInteger, primary_key=True)

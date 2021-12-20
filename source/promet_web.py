@@ -104,9 +104,12 @@ class PrometSessionElement(webapp.SessionElement):
             cnt = query.count()
             if cnt == 1:
                 self.User = query.first()
-                self.User.LastLogin = datetime.datetime.now()
-                self.Connection.commit()
-                return True
+                if self.User.checkPassword(auth[1]):
+                    self.User.LastLogin = datetime.datetime.now()
+                    self.Connection.commit()
+                    return True
+                else:
+                    return False
         return False
 webapp.CustomSessionElement(PrometSessionElement)
 webapp.ColoredOutput(logging.DEBUG)
