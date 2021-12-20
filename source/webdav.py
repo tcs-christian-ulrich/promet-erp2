@@ -472,37 +472,6 @@ def route(root):
 
 """
 class DAVRequestHandler(BaseHTTPRequestHandler):
-    server_version = "Promet-ERP"
-    all_props = ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcontenttype',
-                'contentclass', 'getcontentlanguage', 'creationdate', 'lastaccessed', 'getlastmodified',
-                'getcontentlength', 'iscollection', 'isstructureddocument', 'defaultdocument',
-                'displayname', 'isroot', 'resourcetype']
-    basic_props = ['name', 'getcontenttype', 'getcontentlength', 'creationdate', 'iscollection']
-    auth_file = False 
-    auth_enable = False
-    Auserlist = []
-
-     # User Auth 
-     # if success ,return False; 
-     # Get WebDav User/Pass file : wdusers.conf
-     # file formate:   user:pass\n user:pass\n
-    def WebAuth(self):
-        if self.server.auth_enable:
-            if 'Authorization' in self.headers:
-                try:
-                    AuthInfo = self.headers['Authorization'][6:]
-                except:
-                    AuthInfo = ''
-                if AuthInfo in self.server.userpwd:
-                    return False    # Auth success
-            self.send_response(401,'Authorization Required')
-            self.send_header('WWW-Authenticate', 'Basic realm="WebDav Auth"')
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            return True 
-        else:
-            return False 
-
     def do_DELETE(self):
         if self.WebAuth():
             return         

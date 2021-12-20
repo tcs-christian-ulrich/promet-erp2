@@ -44,20 +44,31 @@ class StaticCollection(Collection):
         return self.items
     def append(self,member):
         self.items.append(member)
+class OverviewFile(Member):
+    def __init__(self, classname, format, parent=None):
+        super().__init__('list.'+format, parent=parent)
+        self.tablename = classname
+class TableCollection(StaticCollection):
+    def __init__(self, name, parent=None):
+        super().__init__(name, parent=parent)
+        JsonIndex = OverviewFile(name,'json',self)
 class PrometSessionElement(webapp.SessionElement):
     def __init__(self) -> None:
         super().__init__()
         self.Connection = None
         self.User = None
         self.LastError = None
+        self.root = StaticCollection('')
         def CreateConnection():
             try:
                 self.Connection = promet.GetConnection()
+                for dataset in promet.Table.metadata.sorted_tables:
+                    if dataset.fullname.lower() in ['users','orders','masterdata','pwsave']:
+                        TableCollection(dataset.fullname.lower(),parent=self.root)
             except BaseException as e:
                 self.LastError = e
         self.ConnThread = threading.Thread(target=CreateConnection)
         self.ConnThread.start()
-        self.root = StaticCollection('')
     def FindPath(self,path):
         elem = self.root
         for e in path:

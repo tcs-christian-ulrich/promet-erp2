@@ -11,12 +11,11 @@ Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
-    class EnumeratableTable: pass
     class IDGenerator(Table):
         __tablename__ = 'GEN_SQL_ID'
         #id = Column('SQL_ID',BigInteger, primary_key=True, autoincrement=True)
         gid = Column('ID',BigInteger, primary_key=True)
-    class User(Table,tojson.OutputMixin,EnumeratableTable):
+    class User(Table,tojson.OutputMixin):
         __tablename__ = 'USERS'
         id = Column('SQL_ID',BigInteger, primary_key=True)
         Type = Column('TYPE',String(1))
@@ -322,6 +321,15 @@ with warnings.catch_warnings():
         Notice=Column("NOTICE",String(convert_unicode=True))
         CreatedBy=Column("CREATEDBY",String(4,convert_unicode=True))
         TimestampD=Column("TIMESTAMPD",DateTime,nullable=False)
+    class PasswordSave(Table,tojson.OutputMixin):
+        __tablename__ = 'PWSAVE'
+        RELATIONSHIPS_TO_DICT = True
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Name=Column("NAME",String(200,convert_unicode=True))
+        Site=Column("SITE",String(500,convert_unicode=True))
+        UserName=Column("USERNAME",String(400,convert_unicode=True))
+        Password=Column("PASSWORD",String(400,convert_unicode=True))
+        Date=Column("DATE",DateTime)
 def GetID(session):
     nid = None
     try:
