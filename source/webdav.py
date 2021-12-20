@@ -343,18 +343,18 @@ a_all_props =   ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcon
 a_basic_props = ['name', 'getcontenttype', 'getcontentlength', 'creationdate', 'iscollection', 'resourcetype']
 @bottle.error(405)
 def method_not_allowed(old_res):
-    session = webapp.Session()
     if bottle.request.method == 'OPTIONS':
         res = bottle.HTTPResponse()
-        res.set_header('Access-Control-Allow-Origin', '*')
-        res.headers['Allow'] = str(dav_methods)[2:-2].replace('\'','')
-        res.headers['DAV']   = '1, 2'    #OSX Finder need Ver 2, if Ver 1 -- read only
-        res.headers['MS-Author-Via'] = 'DAV'
+        handle_headers(res)
         return res
     elif bottle.request.method == 'PROPFIND':
         res = bottle.HTTPResponse()
-        res.headers['Allow'] = str(dav_methods)[2:-2].replace('\'','')
-        res.headers['DAV']   = '1, 2'    #OSX Finder need Ver 2, if Ver 1 -- read only
+        session = handle_headers(res)
+        if res.status_code == 200 and not session.User:
+            res.status = 403
+            return res
+        elif res.status_code != 200:
+            return res
         depth = 'infinity'
         if 'Depth' in bottle.request.headers:
             depth = bottle.request.headers['Depth'].lower()
@@ -425,10 +425,38 @@ def method_not_allowed(old_res):
             actElements = newElements
             adepth += 1
         res.body += '</D:multistatus>'
-        logging.debug(bottle.request.body.read().decode())
-        logging.debug(res.body)
+        #logging.debug(bottle.request.body.read().decode())
+        #logging.debug(res.body)
         return res
     return bottle.request.app.default_error_handler(old_res)
+def handle_headers(response):
+    response.set_header('Access-Control-Allow-Origin', '*')
+    response.headers['Allow'] = str(dav_methods)[2:-2].replace('\'','')
+    response.headers['DAV']   = '1, 2'    #OSX Finder need Ver 2, if Ver 1 -- read only
+    response.headers['MS-Author-Via'] = 'DAV'
+    response.headers['Access-Control-Max-Age'] = '3600'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
+    response.headers['Access-Control-Allow-Headers'] = \
+        'Origin, Accept, Accept-Encoding, Content-Length, ' + \
+        'Content-Type, Authorization, Depth, If-Modified-Since, '+ \
+        'If-None-Match'
+    response.headers['Access-Control-Expose-Headers'] = \
+        'Content-Type, Last-Modified, WWW-Authenticate'
+    origin = bottle.request.headers.get('Origin')
+    response.headers['Access-Control-Allow-Origin'] = origin
+    session = webapp.Session(origin)
+    if session.isAuthorized(bottle.request.auth):
+        response.status = 200
+        response.headers['Access-Control-request-Headers'] = session.sid
+    elif bottle.request.method == 'OPTIONS' and session.sid:
+        # tells the world we do CORS when authorized
+        response.headers['Access-Control-request-Headers'] = session.sid
+        response.status = 200
+    elif session.Connection is not None:
+        response.headers['WWW-Authenticate'] = 'Basic realm="Promet-ERP"'
+        response.headers['Access-Control-request-Headers'] = session.sid
+        response.status = 401
+    return session
 dav_methods = ['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL']
 def route(root):
     dav_root = root

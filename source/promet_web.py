@@ -13,8 +13,8 @@ class Member:
     def getProperties(self):
         p = {}  
         p['displayname'] = self.name
+        p['getcontentlength'] = '0'
         if self.type == Member.M_MEMBER:
-            p['getcontentlength'] = '0'
             p['getcontentlanguage'] = None
         elif Member.M_COLLECTION:
             p['resourcetype'] = '<D:collection/>'
@@ -72,7 +72,7 @@ class PrometSessionElement(webapp.SessionElement):
                 break
         return (path, elem)
     def WaitforConnection(self):
-        for i in range(500):
+        for i in range(2000):
             time.sleep(0.1)
             if self.ConnThread and self.ConnThread.is_alive():
                 pass
@@ -85,7 +85,7 @@ class PrometSessionElement(webapp.SessionElement):
             if self.Connection:
                 return True
         return False
-    def is_authorized(self,auth):
+    def isAuthorized(self,auth):
         if self.User:
             return True
         if self.WaitforConnection() and auth:
