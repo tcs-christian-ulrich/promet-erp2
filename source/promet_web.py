@@ -44,8 +44,6 @@ class StaticCollection(Collection):
         return self.items
     def append(self,member):
         self.items.append(member)
-root = StaticCollection('')
-d1 = StaticCollection('d1',root)
 class PrometSessionElement(webapp.SessionElement):
     def __init__(self) -> None:
         super().__init__()
@@ -59,6 +57,20 @@ class PrometSessionElement(webapp.SessionElement):
                 self.LastError = e
         self.ConnThread = threading.Thread(target=CreateConnection)
         self.ConnThread.start()
+        self.root = StaticCollection('')
+    def FindPath(self,path):
+        elem = self.root
+        for e in path:
+            tmp = elem.findMember(e)
+            if tmp is None and e[-1:] == '/':
+                e = e[:-1] 
+                tmp = elem.findMember(e)
+                if tmp and tmp.type == promet_web.Member.M_MEMBER:
+                    tmp = None
+                elem = tmp
+            if elem == None:
+                break
+        return (path, elem)
     def WaitforConnection(self):
         for i in range(500):
             time.sleep(0.1)

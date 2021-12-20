@@ -1,6 +1,6 @@
 import sys,urllib,re,urllib.parse,logging
 from time import time, timezone, strftime, localtime, gmtime
-import os, shutil, uuid, hashlib, mimetypes, base64, bottle,promet_web
+import os, shutil, uuid, hashlib, mimetypes, base64, bottle,webapp,promet_web
 class FileMember(promet_web.Member):
     def __init__(self, name, parent):
         self.name = name
@@ -331,20 +331,6 @@ def split_path(path):
         if len(p) > 0:
             p[-1] += '/'
     return p
-def path2elem(path):
-    #Returns split path (see split_path()) and Member object of the last element
-    elem = promet_web.root
-    for e in path:
-        tmp = elem.findMember(e)
-        if tmp is None and e[-1:] == '/':
-            e = e[:-1] 
-            tmp = elem.findMember(e)
-            if tmp and tmp.type == promet_web.Member.M_MEMBER:
-                tmp = None
-            elem = tmp
-        if elem == None:
-            break
-    return (path, elem)
 def serverpath(path):
     #return bottle.request.url[:bottle.request.url.find(dav_root)]+
     return dav_root+'/'+path
@@ -357,6 +343,7 @@ a_all_props =   ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcon
 a_basic_props = ['name', 'getcontenttype', 'getcontentlength', 'creationdate', 'iscollection', 'resourcetype']
 @bottle.error(405)
 def method_not_allowed(old_res):
+    session = webapp.Session()
     if bottle.request.method == 'OPTIONS':
         res = bottle.HTTPResponse()
         res.set_header('Access-Control-Allow-Origin', '*')
@@ -384,7 +371,7 @@ def method_not_allowed(old_res):
                 pd = d['propfind']['prop']
                 for prop in pd:
                      wished_props.append(prop.split(' ')[0])
-        path, elem = path2elem(split_path(bottle.request.path))
+        path, elem = session.FindPath(split_path(bottle.request.path))
         if not elem:
             if len(path) >= 1: # it's a non-existing file
                 res.status = 404
@@ -443,16 +430,17 @@ def method_not_allowed(old_res):
         return res
     return bottle.request.app.default_error_handler(old_res)
 dav_methods = ['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL']
-@bottle.route(dav_root+'<:re:.*>', methods=dav_methods)
-def dav_query(p):
-    #p = bottle.request.path
-    if p.startswith('v2'):
-        p = p[2:]
-        if bottle.request.method in 'OPTIONS':
+def route(root):
+    dav_root = root
+    @bottle.route(dav_root+'<:re:.*>', methods=dav_methods)
+    def dav_query():
+        p = bottle.request.path
+        if p.startswith('v2'):
+            p = p[2:]
+            if bottle.request.method in 'OPTIONS':
+                return None
+        else:
             return None
-    else:
-        return None
-app.run(port=8085)
 
 """
 class DAVRequestHandler(BaseHTTPRequestHandler):
@@ -573,78 +561,6 @@ class DAVRequestHandler(BaseHTTPRequestHandler):
         self.send_response(204, 'No Content')        # unlock using 204 for sucess.
         self.send_header('Content-length', '0')
         self.end_headers()
-
-    def do_PROPFIND(self):
-        if self.WebAuth():
-            return 
-        depth = 'infinity'
-        if 'Depth' in self.headers:
-            depth = self.headers['Depth'].lower()
-        if 'Content-length' in self.headers:
-            req = self.rfile.read(int(self.headers['Content-length']))
-        else:
-            req = self.rfile.read()
-        d = builddict(req)              # change all http.request to dict stru
-        wished_all = False
-        if len(d) == 0:
-            wished_props = DAVRequestHandler.basic_props
-        else:
-            if 'allprop' in d['propfind']:
-                wished_props = DAVRequestHandler.all_props
-                wished_all = True
-            else:
-                wished_props = []
-                for prop in d['propfind']['prop']:
-                ### 2017/9/7 Edit By LCJ , Old is [ wished_props.append(prop)  ]
-                ### for IOS Coda Webdav support ###
-                     wished_props.append(prop.split(' ')[0])
-        path, elem = self.path_elem()
-        if not elem:
-            if len(path) >= 1: # it's a non-existing file
-                self.send_response(404, 'Not Found')
-                self.send_header('Content-length', '0')
-                self.end_headers()
-                return
-            else:
-                elem = self.server.root     # fixup root lookups?
-        if depth != '0' and not elem:   #or elem.type != Member.M_COLLECTION:
-            self.send_response(406, 'This is not allowed')
-            self.send_header('Content-length', '0')
-            self.end_headers()
-            return
-        self.send_response(207, 'Multi-Status')          #Multi-Status
-        self.send_header('Content-Type', 'text/xml')
-        self.send_header("charset",'"utf-8"')        
-        # !!! if need debug output xml info,please set last var from False to True. 
-        w = BufWriter(self.wfile, False)
-        w.write('<?xml version="1.0" encoding="utf-8" ?>\n')
-        w.write('<D:multistatus xmlns:D="DAV:" xmlns:Z="urn:schemas-microsoft-com:">\n')
-
-        def write_props_member(w, m):
-            w.write('<D:response>\n<D:href>%s</D:href>\n<D:propstat>\n<D:prop>\n' % urllib.quote(m.virname))     #add urllib.quote for chinese
-            props = m.getProperties()       # get the file or dir props 
-            # For OSX Finder : getlastmodified,getcontentlength,resourceType
-            if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):
-                sDisk = os.statvfs('/')
-                props['quota-used-bytes'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
-                props['quotaused'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
-                props['quota-available-bytes'] = sDisk.f_bavail * sDisk.f_frsize
-                props['quota'] = sDisk.f_bavail * sDisk.f_frsize                                
-            for wp in wished_props:
-                if props.has_key(wp) == False:
-                    w.write('  <D:%s/>\n' % wp)
-                else:
-                    w.write('  <D:%s>%s</D:%s>\n' % (wp, str(props[wp]), wp))
-            w.write('</D:prop>\n<D:status>HTTP/1.1 200 OK</D:status>\n</D:propstat>\n</D:response>\n')
-
-        write_props_member(w, elem)
-        if depth == '1':
-            for m in elem.getMembers():
-                write_props_member(w,m)
-        w.write('</D:multistatus>')
-        self.send_header('Content-Length', str(w.getSize()))
-        self.end_headers()
-        w.flush()
 
     def do_GET(self, onlyhead=False):
         if self.WebAuth():
@@ -772,66 +688,4 @@ class DAVRequestHandler(BaseHTTPRequestHandler):
      # disable log info output to screen    
     def log_message(self,format,*args):
     	pass
-
-class BufWriter:
-    def __init__(self, w, debug=True):
-        self.w = w
-        self.buf = StringIO(u'')             
-        self.debug = debug
-
-    def write(self, s):
-        if self.debug:
-            sys.stderr.write(s)
-        self.buf.write(unicode(s,'utf-8'))              # add unicode(s,'utf-8') for chinese code.
-        
-    def flush(self):
-        self.w.write(self.buf.getvalue().encode('utf-8'))
-        self.w.flush()
-
-    def getSize(self):
-        return len(self.buf.getvalue().encode('utf-8'))
-       
-class DAVServer(ThreadingMixIn, HTTPServer):
-    def __init__(self, addr, handler, root, userpwd):
-        HTTPServer.__init__(self, addr, handler)
-        self.root = root
-        self.userpwd = userpwd      # WebDav Auth user:passwd 
-        if len(userpwd)>0:
-            self.auth_enable = True
-        else:
-            self.auth_enable = False
-
-    # disable the broken pipe error message 
-    def finish_request(self,request,client_address):
-        try:
-            HTTPServer.finish_request(self, request, client_address)
-        except socket.error as e:
-            pass
-
-if __name__ == '__main__':
-    # WebDav TCP Port 
-    srvport = 8000
-    # Get local IP address
-    import socket
-    myaddr = get_localip()
-    print('WebDav Server run at '+myaddr+':'+str(srvport)+'...')
-    server_address = ('', srvport)
-    # WebDav Auth User/Password file 
-    # if not this file ,the auth function disable.
-    # file format: user:passwd\n user:passwd\n
-    # or you can change your auth mode and file save format 
-    userpwd = []
-    try:
-        f = file('wdusers.conf', 'r')
-        for uinfo in f.readlines():
-            uinfo = uinfo.replace('\n','')
-            if len(uinfo)>2:
-                userpwd.append(base64.b64encode(uinfo))
-    except:
-        pass
-    # first is Server root dir, Second is virtual dir
-    # **** Change first ./ to your dir , etc :/mnt/flash/public 
-    root = DirCollection('./../', '/')
-    httpd = DAVServer(server_address, DAVRequestHandler, root, userpwd)
-    httpd.serve_forever()       # todo: add some control over starting and stopping the server
 """
