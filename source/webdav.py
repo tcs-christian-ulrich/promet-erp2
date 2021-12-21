@@ -478,7 +478,7 @@ def route(root):
                 if len(path) >= 1: # it's a non-existing file
                     res.status = 404
                     return res
-            else if bottle.request.method in ['GET']:
+            elif bottle.request.method in ['GET']:
                 return elem.getContent(session,bottle.request)
             else:
                 res.status = 200

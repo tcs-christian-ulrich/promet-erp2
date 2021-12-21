@@ -15,9 +15,12 @@ with warnings.catch_warnings():
         __tablename__ = 'GEN_SQL_ID'
         #id = Column('SQL_ID',BigInteger, primary_key=True, autoincrement=True)
         gid = Column('ID',BigInteger, primary_key=True)
-    class User(Table,tojson.OutputMixin):
-        __tablename__ = 'USERS'
+    class BasicTable:
         id = Column('SQL_ID',BigInteger, primary_key=True)
+    class TimestampTable(BasicTable):
+        TimestampD = Column("TIMESTAMPD",DateTime)
+    class User(Table,TimestampTable,tojson.OutputMixin):
+        __tablename__ = 'USERS'
         Type = Column('TYPE',String(1))
         Parent = Column('PARENT',BigInteger)
         AccountNo = Column('ACCOUNTNO',String(20),nullable=False);
@@ -57,13 +60,10 @@ with warnings.catch_warnings():
                 Result = (aRes[:len(self.Password)] == self.Password) and (len(self.Password) > 30)
             Result = True
             return Result
-    class BasicTable:
-        __tablename__ = 'NONE'
-        TimestampD = Column("TIMESTAMPD",DateTime)
-    class BasicChangeableTable:
+    class BasicChangeableTable(TimestampTable):
         ChangedBy = Column("CHANGEDBY",String(4))
         CreatedBy = Column("CREATEDBY",String(4))
-    class OrderAddress(Table,BasicTable,tojson.OutputMixin):
+    class OrderAddress(Table,TimestampTable,tojson.OutputMixin):
         __tablename__ = 'ORDERADDR'
         id = Column('SQL_ID',BigInteger, primary_key=True)
         RefId = Column('REF_ID',Integer, ForeignKey('ORDERS.SQL_ID'))
@@ -291,7 +291,7 @@ with warnings.catch_warnings():
         PRScriptFunc=Column("PRSCRIPTFUNC",String(160))
         ImageRef=Column("IMAGEREF",Integer)
         Positions = relationship(MasterdataPosition, lazy='joined')
-    class Scripts(Table,BasicTable,tojson.OutputMixin):
+    class Scripts(Table,TimestampTable,tojson.OutputMixin):
         __tablename__ = 'SCRIPTS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -311,7 +311,7 @@ with warnings.catch_warnings():
         Version=Column("VERSION",String(25))
         Active=Column("ACTIVE",String(1))
         Priority = Column("PRIORITY",Integer)
-    class Boilerplate(Table,BasicTable,tojson.OutputMixin):
+    class Boilerplate(Table,TimestampTable,tojson.OutputMixin):
         __tablename__ = 'BOILERPLATE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -327,7 +327,7 @@ with warnings.catch_warnings():
         Stop=Column("STOP",BigInteger,nullable=False)
         Use=Column("USE",String(200,convert_unicode=True))
         Notice=Column("NOTICE",String(convert_unicode=True))
-    class PasswordSave(Table,BasicTable,tojson.OutputMixin):
+    class PasswordSave(Table,TimestampTable,tojson.OutputMixin):
         __tablename__ = 'PWSAVE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)

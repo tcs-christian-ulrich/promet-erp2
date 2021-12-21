@@ -64,9 +64,14 @@ class OverviewFile(Member):
         super().__init__('list.'+format, parent=parent)
         self.dataset = dataset
     def getContent(self,session,request):
-        rows = session.Connection.query(self.dataset).order_by(sqlalchemy.desc(promet.BasicTable.TimestampD)).limit(100)
+        rows = session.Connection.query(self.dataset).order_by(sqlalchemy.desc(promet.TimestampTable.TimestampD)).limit(100)
         res = json.dumps([dict(row) for row in rows], default=sqlencoder, indent=4)
         return res.encode()
+    def putContent(self,session,request):
+        rows = json.loads(request.body)
+        for row in rows:
+            if row.id:
+                old_row = session.Connection.query(self.dataset).filter(promet.BasicTable.id == row.id).first()
     def getProperties(self, session, request):
         res = super().getProperties(session, request)
         res['getcontenttype'] = 'text/x-json'
