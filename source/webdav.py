@@ -371,7 +371,7 @@ def method_not_allowed(old_res):
                 pd = d['propfind']['prop']
                 for prop in pd:
                      wished_props.append(prop.split(' ')[0])
-        path, elem = session.FindPath(split_path(bottle.request.path))
+        path, elem = session.FindPath(split_path(bottle.request.path),session,bottle.request)
         if not elem:
             if len(path) >= 1: # it's a non-existing file
                 res.status = 404
@@ -389,7 +389,7 @@ def method_not_allowed(old_res):
 
         def write_props_member(m):
             res.body += '<D:response>\n<D:href>%s</D:href>\n' % (serverpath(urllib.parse.quote(m.virname)))     #add urllib.quote for chinese
-            props = m.getProperties()       # get the file or dir props 
+            props = m.getProperties(session,bottle.request)       # get the file or dir props 
             # 200
             res.body += '<D:propstat>\n<D:prop>\n'
             # For OSX Finder : getlastmodified,getcontentlength,resourceType
@@ -419,8 +419,9 @@ def method_not_allowed(old_res):
         while (adepth <= depth) and len(actElements)>0:
             newElements = []
             for elem in actElements:
-                for m in elem.getMembers():
-                    newElements.append(m)
+                if elem.type == promet_web.Collection.M_COLLECTION:
+                    for m in elem.getMembers(session,bottle.request):
+                        newElements.append(m)
                 write_props_member(elem)
             actElements = newElements
             adepth += 1

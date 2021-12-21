@@ -1,5 +1,6 @@
 #from inspect import getmembers
 import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy,hashlib
+from pkg_resources import require
 class Member:
     M_MEMBER = 1           
     M_COLLECTION = 2        
@@ -7,13 +8,17 @@ class Member:
         self.name = name
         self.virname = name
         self.parent = parent
+        self.type = self.M_MEMBER
         if parent:
             parent.append(self)
-        self.type = Member.M_COLLECTION
-    def getProperties(self):
+    def getContent(self,session,request):
+        return b''
+    def getSize(self,session,request):
+        return len(self.getContent(session,request))
+    def getProperties(self,session,request):
         p = {}  
         p['displayname'] = self.name
-        p['getcontentlength'] = '0'
+        p['getcontentlength'] = str(self.getSize(session,request))
         if self.type == Member.M_MEMBER:
             p['getcontentlanguage'] = None
         elif Member.M_COLLECTION:
@@ -26,13 +31,13 @@ class Collection(Member):
         self.type = Member.M_COLLECTION
     def getMembers(self):
         return []
-    def findMember(self,name):
-        for member in self.getMembers():
+    def findMember(self,name,session,request):
+        for member in self.getMembers(session,request):
             if member.name == name:
                 return member
         return None
-    def getProperties(self):
-        p = super().getProperties()
+    def getProperties(self,session,request):
+        p = super().getProperties(session,request)
         p['iscollection'] = 1
         p['getcontenttype'] = Collection.COLLECTION_MIME_TYPE
         return p
@@ -40,18 +45,20 @@ class StaticCollection(Collection):
     def __init__(self, name, parent=None):
         super().__init__(name, parent=parent)
         self.items = []
-    def getMembers(self):
+    def getMembers(self,session,request):
         return self.items
     def append(self,member):
         self.items.append(member)
 class OverviewFile(Member):
-    def __init__(self, classname, format, parent=None):
+    def __init__(self, dataset, format, parent=None):
         super().__init__('list.'+format, parent=parent)
-        self.tablename = classname
+        self.dataset = dataset
+    def getContent(self,session,request):
+        return b''
 class TableCollection(StaticCollection):
-    def __init__(self, name, parent=None):
-        super().__init__(name, parent=parent)
-        JsonIndex = OverviewFile(name,'json',self)
+    def __init__(self, dataset, parent=None):
+        super().__init__(dataset.fullname.lower(), parent=parent)
+        JsonIndex = OverviewFile(dataset,'json',self)
 class PrometSessionElement(webapp.SessionElement):
     def __init__(self) -> None:
         super().__init__()
@@ -64,21 +71,21 @@ class PrometSessionElement(webapp.SessionElement):
                 self.Connection = promet.GetConnection()
                 for dataset in promet.Table.metadata.sorted_tables:
                     if dataset.fullname.lower() in ['users','orders','masterdata','pwsave']:
-                        TableCollection(dataset.fullname.lower(),parent=self.root)
+                        TableCollection(dataset,parent=self.root)
             except BaseException as e:
                 self.LastError = e
         self.ConnThread = threading.Thread(target=CreateConnection)
         self.ConnThread.start()
-    def FindPath(self,path):
+    def FindPath(self,path,session,request):
         elem = self.root
         for e in path:
-            tmp = elem.findMember(e)
+            tmp = elem.findMember(e,session,request)
             if tmp is None and e[-1:] == '/':
                 e = e[:-1] 
-                tmp = elem.findMember(e)
-                if tmp and tmp.type == promet_web.Member.M_MEMBER:
+                tmp = elem.findMember(e,session,request)
+                if tmp and tmp.type == Member.M_MEMBER:
                     tmp = None
-                elem = tmp
+            elem = tmp
             if elem == None:
                 break
         return (path, elem)

