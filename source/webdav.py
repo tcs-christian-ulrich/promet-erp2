@@ -466,11 +466,16 @@ def route(root):
         p = bottle.request.path
         if p.startswith('v2'):
             p = p[2:]
-            if bottle.request.method in 'OPTIONS':
-                return None
+        if bottle.request.method in ['GET','HEAD']:
+            res = bottle.response
+            session = handle_headers(res)
+            if res.status_code == 200 and not session.User:
+                res.status = 403
+                return res
+            elif res.status_code != 200:
+                return res
         else:
             return None
-
 """
 class DAVRequestHandler(BaseHTTPRequestHandler):
     def do_DELETE(self):

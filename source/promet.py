@@ -399,7 +399,7 @@ def GetConnection(ConnStr=None,Mandant=None):
         if logging.root.level == logging.DEBUG:
             engine = create_engine(ConnStr, echo=True, echo_pool='debug')
         else:
-            engine = create_engine(ConnStr, echo=True, echo_pool='debug')
+            engine = create_engine(ConnStr)
         engine.convert_unicode = True
         Table.metadata.create_all(engine)
         if engine:

@@ -1,6 +1,6 @@
-import bottle
+import bottle,webapp,logging,webdav
 app = bottle.app()
-import webdav
+webapp.ColoredOutput(logging.INFO)
 @bottle.get('/')
 @bottle.get('/index.html')
 @bottle.get('/<filepath>')

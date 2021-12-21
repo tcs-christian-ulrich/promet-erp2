@@ -1,5 +1,5 @@
 #from inspect import getmembers
-import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy,hashlib
+import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy,hashlib,json
 from pkg_resources import require
 class Member:
     M_MEMBER = 1           
@@ -49,12 +49,24 @@ class StaticCollection(Collection):
         return self.items
     def append(self,member):
         self.items.append(member)
+def sqlencoder(obj):
+    """JSON encoder function for SQLAlchemy special classes."""
+    if isinstance(obj, datetime.date):
+        return obj.isoformat()
+    elif isinstance(obj, decimal.Decimal):
+        return float(obj)
 class OverviewFile(Member):
     def __init__(self, dataset, format, parent=None):
         super().__init__('list.'+format, parent=parent)
         self.dataset = dataset
     def getContent(self,session,request):
-        return b''
+        rows = session.Connection.query(self.dataset).limit(100)
+        res = json.dumps([dict(row) for row in rows], default=sqlencoder, indent=4)
+        return res.encode()
+    def getProperties(self, session, request):
+        res = super().getProperties(session, request)
+        res['getcontenttype'] = 'text/x-json'
+        return res
 class TableCollection(StaticCollection):
     def __init__(self, dataset, parent=None):
         super().__init__(dataset.fullname.lower(), parent=parent)
@@ -119,4 +131,3 @@ class PrometSessionElement(webapp.SessionElement):
                     return False
         return False
 webapp.CustomSessionElement(PrometSessionElement)
-webapp.ColoredOutput(logging.DEBUG)
