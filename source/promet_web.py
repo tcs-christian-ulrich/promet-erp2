@@ -65,21 +65,38 @@ class OverviewFile(Member):
         self.dataset = dataset
     def getContent(self,session,request):
         rows = session.Connection.query(self.dataset).order_by(sqlalchemy.desc(promet.TimestampTable.TimestampD)).limit(100)
-        res = json.dumps([dict(row) for row in rows], default=sqlencoder, indent=4)
+        res = []
+        for row in rows:
+            res.append(json.loads(row.to_json()))
+        res = json.dumps(res, indent=4)
         return res.encode()
     def putContent(self,session,request):
-        rows = json.loads(request.body)
+        rows = json.load(request.body)
+        changed = False
         for row in rows:
-            if row.id:
-                old_row = session.Connection.query(self.dataset).filter(promet.BasicTable.id == row.id).first()
+            if 'id' in row:
+                old_row = session.Connection.query(self.dataset).filter(promet.BasicTable.id==row['id']).first()
+                if not old_row:
+                    logging.warning('put row not implemented '+row['SQL_ID'])
+                else:
+                    for field in row:
+                        if field in old_row:
+                            if field not in ['TimestampD','id']:
+                                if row[field] != getattr(old_row,field):
+                                    #setattr(old_row,field,row[field])
+                                    old_row[field] = row[field]
+                                    changed = True
+        if changed:
+            session.Connection.commit()        
     def getProperties(self, session, request):
         res = super().getProperties(session, request)
         res['getcontenttype'] = 'text/x-json'
         return res
 class TableCollection(StaticCollection):
     def __init__(self, dataset, parent=None):
-        super().__init__(dataset.fullname.lower(), parent=parent)
+        super().__init__(dataset.__tablename__.lower(), parent=parent)
         JsonIndex = OverviewFile(dataset,'json',self)
+ExportedTables = [promet.User,promet.Order,promet.Masterdata,promet.PasswordSave]
 class PrometSessionElement(webapp.SessionElement):
     def __init__(self) -> None:
         super().__init__()
@@ -91,8 +108,9 @@ class PrometSessionElement(webapp.SessionElement):
             try:
                 self.Connection = promet.GetConnection()
                 for dataset in promet.Table.metadata.sorted_tables:
-                    if dataset.fullname.lower() in ['users','orders','masterdata','pwsave']:
-                        TableCollection(dataset,parent=self.root)
+                    for table in ExportedTables:
+                        if table.__tablename__.lower() == dataset.fullname.lower():
+                            TableCollection(table,parent=self.root)
             except BaseException as e:
                 self.LastError = e
         self.ConnThread = threading.Thread(target=CreateConnection)

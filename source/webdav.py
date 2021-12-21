@@ -340,13 +340,12 @@ a_all_props =   ['name', 'parentname', 'href', 'ishidden', 'isreadonly', 'getcon
                  'getcontentlength', 'iscollection', 'isstructureddocument', 'defaultdocument',
                  'displayname', 'isroot', 'resourcetype']
 a_basic_props = ['name', 'getcontenttype', 'getcontentlength', 'creationdate', 'iscollection', 'resourcetype']
-@bottle.error(405)
-def method_not_allowed(old_res):
-    if bottle.request.method == 'OPTIONS':
+def handle_request(request):
+    if request.method == 'OPTIONS':
         res = bottle.HTTPResponse()
         handle_headers(res)
         return res
-    elif bottle.request.method == 'PROPFIND':
+    elif request.method == 'PROPFIND':
         res = bottle.HTTPResponse()
         session = handle_headers(res)
         if res.status_code == 200 and not session.User:
@@ -355,9 +354,9 @@ def method_not_allowed(old_res):
         elif res.status_code != 200:
             return res
         depth = 'infinity'
-        if 'Depth' in bottle.request.headers:
-            depth = bottle.request.headers['Depth'].lower()
-        d = builddict(bottle.request.body.read().decode())
+        if 'Depth' in request.headers:
+            depth = request.headers['Depth'].lower()
+        d = builddict(request.body.read().decode())
         wished_all = False
         if len(d) == 0:
             wished_props = a_basic_props
@@ -370,7 +369,7 @@ def method_not_allowed(old_res):
                 pd = d['propfind']['prop']
                 for prop in pd:
                      wished_props.append(prop.split(' ')[0])
-        path, elem = session.FindPath(split_path(bottle.request.path),session,bottle.request)
+        path, elem = session.FindPath(split_path(request.path),session,request)
         if not elem:
             if len(path) >= 1: # it's a non-existing file
                 res.status = 404
@@ -388,7 +387,7 @@ def method_not_allowed(old_res):
 
         def write_props_member(m):
             res.body += '<D:response>\n<D:href>%s</D:href>\n' % (serverpath(urllib.parse.quote(m.virname)))     #add urllib.quote for chinese
-            props = m.getProperties(session,bottle.request)       # get the file or dir props 
+            props = m.getProperties(session,request)       # get the file or dir props 
             # 200
             res.body += '<D:propstat>\n<D:prop>\n'
             # For OSX Finder : getlastmodified,getcontentlength,resourceType
@@ -419,14 +418,42 @@ def method_not_allowed(old_res):
             newElements = []
             for elem in actElements:
                 if elem.type == promet_web.Collection.M_COLLECTION:
-                    for m in elem.getMembers(session,bottle.request):
+                    for m in elem.getMembers(session,request):
                         newElements.append(m)
                 write_props_member(elem)
             actElements = newElements
             adepth += 1
         res.body += '</D:multistatus>'  
-        logging.debug(bottle.request.body.read().decode())
+        logging.debug(request.body.read().decode())
         logging.debug(res.body)
+        return res
+    elif request.method in ['GET','HEAD','PUT','POST']:
+        res = bottle.response
+        session = handle_headers(res)
+        if res.status_code == 200 and not session.User:
+            res.status = 403
+            return res
+        elif res.status_code != 200:
+            return res
+        path, elem = session.FindPath(split_path(request.path),session,request)
+        if not elem:
+            if len(path) >= 1: # it's a non-existing file
+                res.status = 404
+                return res
+        elif request.method in ['GET']:
+            return elem.getContent(session,request)
+        elif request.method in ['HEAD']:
+            res.status = 200
+        elif request.method in ['POST','PUT']:
+            return elem.putContent(session,request)
+        return res
+    else:
+        return None
+    return None
+@bottle.error(405)
+def method_not_allowed(old_res):
+    res = handle_request(bottle.request)
+    if res:
         return res
     return bottle.request.app.default_error_handler(old_res)
 def handle_headers(response):
@@ -457,7 +484,8 @@ def handle_headers(response):
         response.headers['Access-Control-request-Headers'] = session.sid
         response.status = 401
     return session
-dav_methods = ['OPTIONS', 'PROPFIND', 'GET', 'HEAD', 'POST', 'DELETE', 'PUT', 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL']
+dav_methods = ['GET', 'HEAD', 'POST', 'DELETE', 'PUT']
+#, 'COPY', 'MOVE', 'LOCK', 'UNLOCK', 'PROPPATCH', 'MKCOL'
 def route(root):
     dav_root = root
     @bottle.route(dav_root+'<:re:.*>', methods=dav_methods)
@@ -465,26 +493,7 @@ def route(root):
         p = bottle.request.path
         if p.startswith('v2'):
             p = p[2:]
-        if bottle.request.method in ['GET','HEAD']:
-            res = bottle.response
-            session = handle_headers(res)
-            if res.status_code == 200 and not session.User:
-                res.status = 403
-                return res
-            elif res.status_code != 200:
-                return res
-            path, elem = session.FindPath(split_path(bottle.request.path),session,bottle.request)
-            if not elem:
-                if len(path) >= 1: # it's a non-existing file
-                    res.status = 404
-                    return res
-            elif bottle.request.method in ['GET']:
-                return elem.getContent(session,bottle.request)
-            else:
-                res.status = 200
-            return res
-        else:
-            return None
+        return handle_request(bottle.request)
 """
 class DAVRequestHandler(BaseHTTPRequestHandler):
     def do_DELETE(self):

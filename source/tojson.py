@@ -2,17 +2,16 @@ import json,datetime
 from uuid import UUID
 
 from sqlalchemy.ext.declarative import DeclarativeMeta
-
-
 class OutputMixin(object):
     RELATIONSHIPS_TO_DICT = False
     def __iter__(self):
-        return self.to_dict().iteritems()
+        return self.to_dict().__iter__()
     def to_dict(self, rel=None, backref=None):
         if rel is None:
             rel = self.RELATIONSHIPS_TO_DICT
         res = self.__dict__
-        del res['_sa_instance_state']
+        if '_sa_instance_state' in res:
+            del res['_sa_instance_state']
         #res = {column.key: getattr(self, attr)
         #       for attr, column in self.__mapper__.c.items()}
         if rel:
