@@ -478,8 +478,10 @@ def route(root):
                 if len(path) >= 1: # it's a non-existing file
                     res.status = 404
                     return res
-            else:
+            else if bottle.request.method in ['GET']:
                 return elem.getContent(session,bottle.request)
+            else:
+                res.status = 200
             return res
         else:
             return None
@@ -571,61 +573,6 @@ class DAVRequestHandler(BaseHTTPRequestHandler):
         self.send_response(204, 'No Content')        # unlock using 204 for sucess.
         self.send_header('Content-length', '0')
         self.end_headers()
-
-    def do_GET(self, onlyhead=False):
-        if self.WebAuth():
-            return 
-        path, elem = self.path_elem()
-        if not elem:
-            self.send_error(404, 'Object not found')
-            return
-        try:
-            props = elem.getProperties()
-        except:
-            self.send_response(500, "Error retrieving properties")
-            self.end_headers()
-            return
-        # when the client had Range: bytes=3156-3681 
-        bpoint = 0
-        epoint = 0
-        fullen = props['getcontentlength']
-        if 'Range' in self.headers:
-            stmp = self.headers['Range'][6:]
-            stmp = stmp.split('-')
-            try:
-                bpoint = int(stmp[0])
-            except:
-                bpoint = 0
-            try:
-                epoint = int(stmp[1])
-            except:
-                epoint = fullen - 1
-            if (epoint<=bpoint):
-                bpoint = 0
-                epoint = fullen - 1
-            fullen = epoint - bpoint + 1
-        if epoint>0:
-            self.send_response(206, 'Partial Content')            
-            self.send_header("Content-Range", " Bytes %s-%s/%s" % (bpoint, epoint, fullen))            
-        else:
-            self.send_response(200, 'OK')
-        if elem.type == Member.M_MEMBER:
-            self.send_header("Content-type", props['getcontenttype'])
-            self.send_header("Last-modified", props['getlastmodified'])
-            self.send_header("Content-length", fullen)
-        else:
-            try:
-                ctype = props['getcontenttype']
-            except:
-                ctype = DirCollection.COLLECTION_MIME_TYPE
-            self.send_header("Content-type", ctype)
-        self.end_headers()
-        if not onlyhead:
-            if fullen >0 :      # all 0 size file don't need this 
-                elem.sendData(self.wfile,bpoint,epoint)
-
-    def do_HEAD(self):
-        self.do_GET(True)           # HEAD should behave like GET, only without contents
 
     def do_PUT(self):
         if self.WebAuth():
