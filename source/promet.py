@@ -57,7 +57,13 @@ with warnings.catch_warnings():
                 Result = (aRes[:len(self.Password)] == self.Password) and (len(self.Password) > 30)
             Result = True
             return Result
-    class OrderAddress(Table,tojson.OutputMixin):
+    class BasicTable:
+        __tablename__ = 'NONE'
+        TimestampD = Column("TIMESTAMPD",DateTime)
+    class BasicChangeableTable:
+        ChangedBy = Column("CHANGEDBY",String(4))
+        CreatedBy = Column("CREATEDBY",String(4))
+    class OrderAddress(Table,BasicTable,tojson.OutputMixin):
         __tablename__ = 'ORDERADDR'
         id = Column('SQL_ID',BigInteger, primary_key=True)
         RefId = Column('REF_ID',Integer, ForeignKey('ORDERS.SQL_ID'))
@@ -73,8 +79,7 @@ with warnings.catch_warnings():
         Country = Column("COUNTRY",String(3))
         Postbox = Column("POBOX",Integer)
         AccountNo = Column("ACCOUNTNO",String(20))
-        TimestampD = Column("TIMESTAMPD",DateTime)
-    class OrderPosition(Table,tojson.OutputMixin):
+    class OrderPosition(Table,BasicChangeableTable,tojson.OutputMixin):
         __tablename__ = 'ORDERPOS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -106,9 +111,7 @@ with warnings.catch_warnings():
         Vat = Column("VAT",Integer)
         PosPrice = Column("POSPRICE",Float)
         GrossPrice = Column("GROSSPRICE",Float)
-        TimestampD = Column("TIMESTAMPD",DateTime)
         Parent = Column("PARENT",Integer)
-        ChangedBy = Column("CHANGEDBY",String(4))
         ManufacNr = Column("MANUFACNR",String(40))
         RepairTime = Column("REPAIRTIME",Float)
         CostCentre = Column("COSTCENTRE",String(10))
@@ -128,11 +131,10 @@ with warnings.catch_warnings():
         WorkText = Column("WORKTEXT",String(100))
         PRScript = Column("PRSCRIPT",String(60))
         PRScriptVersion = Column("PRSCRIPTVER",String(8))
-        CreatedBy = Column("CREATEDBY",String(4))
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
-    class Order(Table,tojson.OutputMixin):
+    class Order(Table,BasicChangeableTable,tojson.OutputMixin):
         __tablename__ = 'ORDERS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -167,10 +169,7 @@ with warnings.catch_warnings():
         Note=Column("NOTE",String)
         HeaderText=Column("HEADERTEXT",String)
         FooterText=Column("FOOTERTEXT",String)
-        CreatedBy=Column("CREATEDBY",String(4))
-        TimestampD=Column("TIMESTAMPD",DateTime,nullable=False)
         ProductID=Column("PID",String(250))
-        ChangedBy=Column("CHANGEDBY",String(4))
         Active=Column("ACTIVE",String(1))
         ProjectId=Column("PROJECTID",Integer)
         Project=Column("PROJECT",String(260))
@@ -182,7 +181,7 @@ with warnings.catch_warnings():
         CustomerEmail=Column("EMAIL",String(200))
         Addresses = relationship(OrderAddress, lazy='joined')
         Positions = relationship(OrderPosition, lazy='joined', order_by="OrderPosition.PosNo")
-    class MasterdataPosition(Table,tojson.OutputMixin):
+    class MasterdataPosition(Table,BasicChangeableTable,tojson.OutputMixin):
         __tablename__ = 'MDPOSITIONS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -214,9 +213,7 @@ with warnings.catch_warnings():
         Vat = Column("VAT",Integer)
         PosPrice = Column("POSPRICE",Float)
         GrossPrice = Column("GROSSPRICE",Float)
-        TimestampD = Column("TIMESTAMPD",DateTime)
         Parent = Column("PARENT",Integer)
-        ChangedBy = Column("CHANGEDBY",String(4))
         ManufacNr = Column("MANUFACNR",String(40))
         RepairTime = Column("REPAIRTIME",Float)
         #CostCentre = Column("COSTCENTRE",String(10))
@@ -236,11 +233,10 @@ with warnings.catch_warnings():
         WorkText = Column("WORKTEXT",String(100))
         PRScript = Column("PRSCRIPT",String(60))
         PRScriptVersion = Column("PRSCRIPTVER",String(8))
-        CreatedBy = Column("CREATEDBY",String(4))
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
-    class Masterdata(Table,tojson.OutputMixin):
+    class Masterdata(Table,BasicChangeableTable,tojson.OutputMixin):
         __tablename__ = 'MASTERDATA'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -271,10 +267,7 @@ with warnings.catch_warnings():
         Account=Column("ACCOUNT",String(10))
         CrDate=Column("CRDATE",DateTime)
         ChDate=Column("CHDATE",DateTime)
-        ChangedBy=Column("CHANGEDBY",String(4))
-        CreatedBy=Column("CREATEDBY",String(4))
         Active=Column("ACTIVE",String(1))
-        TimestampD=Column("TIMESTAMPD",DateTime,nullable=False)
         Currency=Column("CURRENCY",String(5))
         Category=Column("CATEGORY",String(60))
         #UPlace=Column("UPLACE",String(100))
@@ -298,7 +291,7 @@ with warnings.catch_warnings():
         PRScriptFunc=Column("PRSCRIPTFUNC",String(160))
         ImageRef=Column("IMAGEREF",Integer)
         Positions = relationship(MasterdataPosition, lazy='joined')
-    class Scripts(Table,tojson.OutputMixin):
+    class Scripts(Table,BasicTable,tojson.OutputMixin):
         __tablename__ = 'SCRIPTS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -307,7 +300,6 @@ with warnings.catch_warnings():
         Name=Column("NAME",String(60),nullable=False)
         Syntax=Column("SYNTAX",String(15),nullable=False)
         Script=Column("SCRIPT",String)
-        TimestampD=Column("TIMESTAMPD",DateTime,nullable=False)
         Status=Column("STATUS",String(3))
         RunEvery = Column("RUNEVERY",Integer)
         Lastrun=Column("LASTRUN",DateTime)
@@ -319,13 +311,13 @@ with warnings.catch_warnings():
         Version=Column("VERSION",String(25))
         Active=Column("ACTIVE",String(1))
         Priority = Column("PRIORITY",Integer)
-    class Boilerplate(Table,tojson.OutputMixin):
+    class Boilerplate(Table,BasicTable,tojson.OutputMixin):
         __tablename__ = 'BOILERPLATE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
         Name=Column("NAME",String(100,convert_unicode=True),nullable=False)
         Text=Column("TEXT",String(convert_unicode=True))
-    class NumberRange(Table,tojson.OutputMixin):
+    class NumberRange(Table,BasicChangeableTable,tojson.OutputMixin):
         __tablename__ = 'NUMBERRANGES'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -335,9 +327,7 @@ with warnings.catch_warnings():
         Stop=Column("STOP",BigInteger,nullable=False)
         Use=Column("USE",String(200,convert_unicode=True))
         Notice=Column("NOTICE",String(convert_unicode=True))
-        CreatedBy=Column("CREATEDBY",String(4,convert_unicode=True))
-        TimestampD=Column("TIMESTAMPD",DateTime,nullable=False)
-    class PasswordSave(Table,tojson.OutputMixin):
+    class PasswordSave(Table,BasicTable,tojson.OutputMixin):
         __tablename__ = 'PWSAVE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)

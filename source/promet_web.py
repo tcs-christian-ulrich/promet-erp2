@@ -64,7 +64,7 @@ class OverviewFile(Member):
         super().__init__('list.'+format, parent=parent)
         self.dataset = dataset
     def getContent(self,session,request):
-        rows = session.Connection.query(self.dataset).limit(100)
+        rows = session.Connection.query(self.dataset).order_by(sqlalchemy.desc(promet.BasicTable.TimestampD)).limit(100)
         res = json.dumps([dict(row) for row in rows], default=sqlencoder, indent=4)
         return res.encode()
     def getProperties(self, session, request):
