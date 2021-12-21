@@ -6,7 +6,10 @@ class Member:
     M_COLLECTION = 2        
     def __init__(self, name, parent = None):
         self.name = name
-        self.virname = name
+        if parent and parent.virname != '':
+            self.virname = parent.virname + '/' + name
+        else:
+            self.virname = name
         self.parent = parent
         self.type = self.M_MEMBER
         if parent:
@@ -21,6 +24,7 @@ class Member:
         p['getcontentlength'] = str(self.getSize(session,request))
         if self.type == Member.M_MEMBER:
             p['getcontentlanguage'] = None
+            p['getetag'] = hashlib.md5(self.virname.encode()).hexdigest()
         elif Member.M_COLLECTION:
             p['resourcetype'] = '<D:collection/>'
         return p

@@ -1,6 +1,5 @@
-import sys,urllib,re,urllib.parse,logging
+import sys, urllib, re, urllib.parse, logging, os, shutil, uuid, hashlib, mimetypes, base64, bottle, webapp, promet_web, pathlib
 from time import time, timezone, strftime, localtime, gmtime
-import os, shutil, uuid, hashlib, mimetypes, base64, bottle,webapp,promet_web
 class FileMember(promet_web.Member):
     def __init__(self, name, parent):
         self.name = name
@@ -394,7 +393,7 @@ def method_not_allowed(old_res):
             res.body += '<D:propstat>\n<D:prop>\n'
             # For OSX Finder : getlastmodified,getcontentlength,resourceType
             if ('quota-available-bytes' in wished_props) or ('quota-used-bytes'in wished_props) or ('quota' in wished_props) or ('quotaused'in wished_props):
-                sDisk = os.statvfs('.')
+                sDisk = os.statvfs(str(pathlib.Path('.')))
                 props['quota-used-bytes'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
                 props['quotaused'] = (sDisk.f_blocks - sDisk.f_bavail) * sDisk.f_frsize
                 props['quota-available-bytes'] = sDisk.f_bavail * sDisk.f_frsize
@@ -425,9 +424,9 @@ def method_not_allowed(old_res):
                 write_props_member(elem)
             actElements = newElements
             adepth += 1
-        res.body += '</D:multistatus>'
-        #logging.debug(bottle.request.body.read().decode())
-        #logging.debug(res.body)
+        res.body += '</D:multistatus>'  
+        logging.debug(bottle.request.body.read().decode())
+        logging.debug(res.body)
         return res
     return bottle.request.app.default_error_handler(old_res)
 def handle_headers(response):
@@ -474,6 +473,14 @@ def route(root):
                 return res
             elif res.status_code != 200:
                 return res
+            path, elem = session.FindPath(split_path(bottle.request.path),session,bottle.request)
+            if not elem:
+                if len(path) >= 1: # it's a non-existing file
+                    res.status = 404
+                    return res
+            else:
+                return elem.getContent(session,bottle.request)
+            return res
         else:
             return None
 """
