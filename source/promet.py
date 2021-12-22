@@ -1,4 +1,5 @@
-import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative,hashlib
+from datetime import datetime
+import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative,hashlib,sqlalchemy.event
 from typing import Text
 from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
 from sqlalchemy import create_engine
@@ -16,7 +17,7 @@ with warnings.catch_warnings():
     class BasicTable:
         id = Column('SQL_ID',BigInteger, primary_key=True)
     class TimestampTable(BasicTable):
-        TimestampD = Column("TIMESTAMPD",DateTime)
+        TimestampD = Column("TIMESTAMPD",DateTime,default=datetime.utcnow, onupdate=datetime.utcnow)
     class User(Table,TimestampTable):
         __tablename__ = 'USERS'
         Type = Column('TYPE',String(1))
