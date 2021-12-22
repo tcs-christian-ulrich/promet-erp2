@@ -5,8 +5,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import relation, relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
 import json,threading,urllib.parse
-try: from . import tojson
-except: import tojson
 Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
 with warnings.catch_warnings():
@@ -19,7 +17,7 @@ with warnings.catch_warnings():
         id = Column('SQL_ID',BigInteger, primary_key=True)
     class TimestampTable(BasicTable):
         TimestampD = Column("TIMESTAMPD",DateTime)
-    class User(Table,TimestampTable,tojson.OutputMixin):
+    class User(Table,TimestampTable):
         __tablename__ = 'USERS'
         Type = Column('TYPE',String(1))
         Parent = Column('PARENT',BigInteger)
@@ -63,7 +61,7 @@ with warnings.catch_warnings():
     class BasicChangeableTable(TimestampTable):
         ChangedBy = Column("CHANGEDBY",String(4))
         CreatedBy = Column("CREATEDBY",String(4))
-    class OrderAddress(Table,TimestampTable,tojson.OutputMixin):
+    class OrderAddress(Table,TimestampTable):
         __tablename__ = 'ORDERADDR'
         id = Column('SQL_ID',BigInteger, primary_key=True)
         RefId = Column('REF_ID',Integer, ForeignKey('ORDERS.SQL_ID'))
@@ -79,7 +77,7 @@ with warnings.catch_warnings():
         Country = Column("COUNTRY",String(3))
         Postbox = Column("POBOX",Integer)
         AccountNo = Column("ACCOUNTNO",String(20))
-    class OrderPosition(Table,BasicChangeableTable,tojson.OutputMixin):
+    class OrderPosition(Table,BasicChangeableTable):
         __tablename__ = 'ORDERPOS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -134,7 +132,7 @@ with warnings.catch_warnings():
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
-    class Order(Table,BasicChangeableTable,tojson.OutputMixin):
+    class Order(Table,BasicChangeableTable):
         __tablename__ = 'ORDERS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -181,7 +179,7 @@ with warnings.catch_warnings():
         CustomerEmail=Column("EMAIL",String(200))
         Addresses = relationship(OrderAddress, lazy='joined')
         Positions = relationship(OrderPosition, lazy='joined', order_by="OrderPosition.PosNo")
-    class MasterdataPosition(Table,BasicChangeableTable,tojson.OutputMixin):
+    class MasterdataPosition(Table,BasicChangeableTable):
         __tablename__ = 'MDPOSITIONS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -236,7 +234,7 @@ with warnings.catch_warnings():
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
-    class Masterdata(Table,BasicChangeableTable,tojson.OutputMixin):
+    class Masterdata(Table,BasicChangeableTable):
         __tablename__ = 'MASTERDATA'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -291,7 +289,7 @@ with warnings.catch_warnings():
         PRScriptFunc=Column("PRSCRIPTFUNC",String(160))
         ImageRef=Column("IMAGEREF",Integer)
         Positions = relationship(MasterdataPosition, lazy='joined')
-    class Scripts(Table,TimestampTable,tojson.OutputMixin):
+    class Scripts(Table,TimestampTable):
         __tablename__ = 'SCRIPTS'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -311,13 +309,13 @@ with warnings.catch_warnings():
         Version=Column("VERSION",String(25))
         Active=Column("ACTIVE",String(1))
         Priority = Column("PRIORITY",Integer)
-    class Boilerplate(Table,TimestampTable,tojson.OutputMixin):
+    class Boilerplate(Table,TimestampTable):
         __tablename__ = 'BOILERPLATE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
         Name=Column("NAME",String(100,convert_unicode=True),nullable=False)
         Text=Column("TEXT",String(convert_unicode=True))
-    class NumberRange(Table,BasicChangeableTable,tojson.OutputMixin):
+    class NumberRange(Table,BasicChangeableTable):
         __tablename__ = 'NUMBERRANGES'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -327,7 +325,7 @@ with warnings.catch_warnings():
         Stop=Column("STOP",BigInteger,nullable=False)
         Use=Column("USE",String(200,convert_unicode=True))
         Notice=Column("NOTICE",String(convert_unicode=True))
-    class PasswordSave(Table,TimestampTable,tojson.OutputMixin):
+    class PasswordSave(Table,TimestampTable):
         __tablename__ = 'PWSAVE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -387,7 +385,7 @@ def GetConnection(ConnStr=None,Mandant=None):
         raise Exception('No Mandant Configuration found')
     try:
         if logging.root.level == logging.DEBUG:
-            engine = create_engine(ConnStr, echo=True, echo_pool='debug')
+            engine = create_engine(ConnStr, echo=True)
         else:
             engine = create_engine(ConnStr)
         engine.convert_unicode = True

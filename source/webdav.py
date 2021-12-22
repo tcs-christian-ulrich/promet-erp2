@@ -424,8 +424,8 @@ def handle_request(request):
             actElements = newElements
             adepth += 1
         res.body += '</D:multistatus>'  
-        logging.debug(request.body.read().decode())
-        logging.debug(res.body)
+        #logging.debug(request.body.read().decode())
+        #logging.debug(res.body)
         return res
     elif request.method in ['GET','HEAD','PUT','POST']:
         res = bottle.response

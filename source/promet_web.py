@@ -1,5 +1,5 @@
 #from inspect import getmembers
-import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy,hashlib,json
+import bottle,webapp,logging,promet,threading,time,datetime,sqlalchemy,sqlalchemy.ext.declarative,sqlalchemy.orm.decl_api,hashlib,json
 from pkg_resources import require
 class Member:
     M_MEMBER = 1           
@@ -76,11 +76,7 @@ class OverviewFile(CachedMember):
         self.dataset = dataset
     def getCachedContent(self,session,request):
         rows = session.Connection.query(self.dataset).order_by(sqlalchemy.desc(promet.TimestampTable.TimestampD)).limit(100)
-        res = []
-        for row in rows:
-            res.append(json.loads(row.to_json()))
-        res = json.dumps(res, indent=4)
-        return res.encode()
+        return json.dumps([row for row in rows], cls=sqljson_encoder(), check_circular=False, indent=4).encode()
     def putContent(self,session,request):
         rows = json.load(request.body)
         changed = False
@@ -168,4 +164,37 @@ class PrometSessionElement(webapp.SessionElement):
                 else:
                     return False
         return False
+def sqljson_encoder(revisit_self = False, fields_to_expand = []):
+    _visited_objs = []
+    class AlchemyEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, datetime.date):
+                return obj.isoformat()
+            elif callable(obj) or isinstance(obj,sqlalchemy.orm.decl_api.registry):
+                return None
+            elif isinstance(obj.__class__, sqlalchemy.ext.declarative.DeclarativeMeta):
+                # don't re-visit self
+                if revisit_self:
+                    if obj in _visited_objs:
+                        return None
+                    _visited_objs.append(obj)
+
+                # go through each field in this SQLalchemy class
+                fields = {}
+                for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
+                    val = obj.__getattribute__(field)
+                    # is this field another SQLalchemy object, or a list of SQLalchemy objects?
+                    if isinstance(val.__class__, sqlalchemy.ext.declarative.DeclarativeMeta) or (isinstance(val, list) and len(val) > 0 and isinstance(val[0].__class__, sqlalchemy.ext.declarative.DeclarativeMeta)):
+                        # unless we're expanding this field, stop here
+                        if field not in fields_to_expand:
+                            # not expanding this field: set it to None and continue
+                            fields[field] = None
+                            continue
+
+                    fields[field] = val
+                # a json-encodable dict
+                return fields
+            return json.JSONEncoder.default(self, obj)
+
+    return AlchemyEncoder
 webapp.CustomSessionElement(PrometSessionElement)
