@@ -87,11 +87,11 @@ class OverviewFile(CachedMember):
                     logging.warning('put row not implemented '+row['SQL_ID'])
                 else:
                     for field in row:
-                        if field in old_row:
+                        if hasattr(old_row, field):
                             if field not in ['TimestampD','id']:
                                 if row[field] != getattr(old_row,field):
-                                    #setattr(old_row,field,row[field])
-                                    old_row[field] = row[field]
+                                    setattr(old_row,field,row[field])
+                                    #old_row[field] = row[field]
                                     changed = True
         if changed:
             session.Connection.commit()        
