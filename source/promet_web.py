@@ -59,11 +59,22 @@ def sqlencoder(obj):
         return obj.isoformat()
     elif isinstance(obj, decimal.Decimal):
         return float(obj)
-class OverviewFile(Member):
+class CachedMember(Member):
+    def __init__(self, name, parent=None, timeout=3):
+        super().__init__(name, parent=parent)
+        self.Cached = None
+        self.timeout = timeout
+    def getContent(self, session, request):
+        if not self.Cached or (time.time()>self.Invalid or session != self.CachedSession):
+            self.Cached = self.getCachedContent(session,request)
+            self.CachedSession = session
+            self.Invalid = time.time()+self.timeout
+        return self.Cached
+class OverviewFile(CachedMember):
     def __init__(self, dataset, format, parent=None):
         super().__init__('list.'+format, parent=parent)
         self.dataset = dataset
-    def getContent(self,session,request):
+    def getCachedContent(self,session,request):
         rows = session.Connection.query(self.dataset).order_by(sqlalchemy.desc(promet.TimestampTable.TimestampD)).limit(100)
         res = []
         for row in rows:
