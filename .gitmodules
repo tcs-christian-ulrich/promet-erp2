@@ -1,3 +1,6 @@
 [submodule "source/webapp"]
 	path = source/webapp
 	url = https://github.com/cutec-chris/python_web_app
+[submodule "source/client/base"]
+	path = source/client/base
+	url = https://github.com/cutec-chris/pweb-base
