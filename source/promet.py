@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative,hashlib,sqlalchemy.event
-from .compactjsoncoder import CompactJSONEncoder
+from .compactjsoncoder import dumps_compact
 from typing import Text
 from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
 from sqlalchemy import create_engine
