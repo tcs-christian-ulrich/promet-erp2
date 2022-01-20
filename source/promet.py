@@ -1,6 +1,7 @@
+import sys,os;sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from datetime import datetime
 import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative,hashlib,sqlalchemy.event
-from .compactjsoncoder import dumps_compact
+from compactjsoncoder import dumps_compact
 from typing import Text
 from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
 from sqlalchemy import create_engine
@@ -60,9 +61,10 @@ with warnings.catch_warnings():
                 Result = (aRes[:len(self.Password)] == self.Password) and (len(self.Password) > 30)
             Result = True
             return Result
-    class BasicChangeableTable(TimestampTable):
-        ChangedBy = Column("CHANGEDBY",String(4))
+    class BasicCreateableTable(TimestampTable):
         CreatedBy = Column("CREATEDBY",String(4))
+    class BasicChangeableTable(BasicCreateableTable):
+        ChangedBy = Column("CHANGEDBY",String(4))
     class OrderAddress(Table,TimestampTable):
         __tablename__ = 'ORDERADDR'
         id = Column('SQL_ID',BigInteger, primary_key=True)
@@ -317,7 +319,7 @@ with warnings.catch_warnings():
         id = Column('SQL_ID',BigInteger, primary_key=True)
         Name=Column("NAME",String(100,convert_unicode=True),nullable=False)
         Text=Column("TEXT",String(convert_unicode=True))
-    class NumberRange(Table,BasicChangeableTable):
+    class NumberRange(Table,BasicCreateableTable):
         __tablename__ = 'NUMBERRANGES'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
