@@ -1,13 +1,13 @@
 import sys,os;sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from datetime import datetime
 import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative,hashlib,sqlalchemy.event
-from compactjsoncoder import dumps_compact
 from typing import Text
 from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relation, relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
-import json,threading,urllib.parse
+from compactjsoncoder import dumps_compact
+import json,threading,urllib.parse,uuid
 Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
 with warnings.catch_warnings():
@@ -17,6 +17,44 @@ with warnings.catch_warnings():
         #id = Column('SQL_ID',BigInteger, primary_key=True, autoincrement=True)
         gid = Column('ID',BigInteger, primary_key=True)
     class BasicTable:
+        RELATIONSHIPS_TO_DICT = False
+        def __iter__(self):
+            return self.to_dict().iteritems()
+        def to_dict(self, rel=None, backref=None):
+            if rel is None:
+                rel = self.RELATIONSHIPS_TO_DICT
+            res = self.__dict__
+            del res['_sa_instance_state']
+            #res = {column.key: getattr(self, attr)
+            #       for attr, column in self.__mapper__.c.items()}
+            if rel:
+                for attr, relation in self.__mapper__.relationships.items():
+                    # Avoid recursive loop between to tables.
+                    try:
+                        if backref == relation.table:
+                            continue
+                    except:
+                        pass
+                    value = getattr(self, attr)
+                    if value is None:
+                        res[relation.key] = None
+                    elif isinstance(value.__class__, sqlalchemy.ext.declarative.DeclarativeMeta):
+                        res[relation.key] = value.to_dict(backref=self.__table__)
+                    else:
+                        res[relation.key] = [i.to_dict(backref=self.__table__)
+                                            for i in value]
+            return res
+        def to_json(self, rel=None):
+            def extended_encoder(x):
+                if isinstance(x, datetime):
+                    return x.isoformat()
+                if isinstance(x, uuid.UUID):
+                    return str(x)
+                else:
+                    return str(x)
+            if rel is None:
+                rel = self.RELATIONSHIPS_TO_DICT
+            return json.dumps(self.to_dict(rel), default=extended_encoder, indent=4)
         id = Column('SQL_ID',BigInteger, primary_key=True)
     class TimestampTable(BasicTable):
         TimestampD = Column("TIMESTAMPD",DateTime,default=datetime.utcnow, onupdate=datetime.utcnow)
