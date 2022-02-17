@@ -6,7 +6,7 @@ from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, up
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relation, relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
-from compactjsoncoder import dumps_compact
+from .compactjsoncoder import dumps_compact
 import json,threading,urllib.parse,uuid
 Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
