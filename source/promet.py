@@ -6,7 +6,6 @@ from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, up
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relation, relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
-from .compactjsoncoder import dumps_compact
 import json,threading,urllib.parse,uuid
 Table = sqlalchemy.ext.declarative.declarative_base()
 session = None
@@ -439,3 +438,12 @@ def GetConnection(ConnStr=None,Mandant=None):
         logging.warning(str(e))
         return None
     return session
+import re,json
+def dumps_compact(*sub, **kw):
+    non_space_pattern = re.compile('[^ ]')
+    compact_length = kw.pop('compact_length', None)
+    r = json.dumps(*sub, **kw)
+    r = r.replace(']',']\n')
+    r = r.replace('[','[\n ')
+    r = r.replace('},','},\n')
+    return r
