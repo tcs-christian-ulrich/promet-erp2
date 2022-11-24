@@ -436,6 +436,37 @@ with warnings.catch_warnings():
         Notes=Column("NOTES",String(convert_unicode=True))
         FTSName=Column("FTSNAME",String(convert_unicode=True))
         Exchanges = relationship(AccountExchange, lazy='joined', order_by="AccountExchange.ValueDate")
+    class MeasData(Table,TimestampTable):
+        __tablename__ = 'MEASDATA'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        ref_id = Column('REF_ID',BigInteger,ForeignKey('MEASUREMENTS.SQL_ID'))
+        Value = Column('DATA',Float)
+        Date=Column("DATE",DateTime)
+    class Measuremnents(Table,TimestampTable):
+        __tablename__ = 'MEASUREMENTS'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        ref_id = Column('REF_ID',BigInteger,ForeignKey('ALLOBJECTS.SQL_ID'))
+        Name=Column("NAME",String(200,convert_unicode=True))
+        Typ=Column("TYPE",String(1))
+        ID=Column("ID",String(200,convert_unicode=True))
+        MeasData = relationship(MeasData, order_by="MeasData.TimestampD")
+    class AllObjects(Table,TimestampTable):
+        __tablename__ = 'ALLOBJECTS'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Number = Column('NUMBER',Integer)
+        Name=Column("NAME",String(200,convert_unicode=True))
+        #MatchCode=Column("MATCHCODE",String(100))
+        Link=Column("LINK",String(240))
+        Measurements = relationship(Measuremnents, order_by="Measuremnents.TimestampD")
+    """
+    class Objects(Table,TimestampTable):
+        __tablename__ = 'OBJECTS'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Number = Column('NUMBER',Integer)
+        Name=Column("NAME",String(200,convert_unicode=True))
+        MatchCode=Column("MATCHCODE",String(100))
+        Link=Column("LINK",String(240))
+    """
 def GetID(session):
     nid = None
     try:
