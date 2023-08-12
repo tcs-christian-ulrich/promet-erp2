@@ -173,6 +173,25 @@ with warnings.catch_warnings():
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
+    class Person(Table,BasicChangeableTable):
+        __tablename__ = 'CUSTOMERS'
+        RELATIONSHIPS_TO_DICT = True
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Accountno=Column("ACCOUNTNO",String(200),nullable=False)
+        MatchCode=Column("MATCHCODE",String(200))
+        Status=Column("STATUS",String(4))
+        Name=Column("NAME",String(240))
+        Treeentry=Column("TREEENTRY",Integer)
+        Discount=Column("DISCOUNT",Float)
+        DiscountGr=Column("DISCOUNTGR",String(2))
+        DefPrice=Column("DEFPRICE",String(3))
+        Language=Column("LANGUAGE",String(3))
+        Currency=Column("CURRENCY",String(5))
+        EAccounty=Column("EACCOUNT",String(20))
+        PaymentTar=Column("PAYMENTTAR",String(2))
+        Type=Column("TYPE",String(1),nullable=False)
+        Info=Column("INFO",String)
+        Category=Column("CATEGORY",String(60))
     class Order(Table,BasicChangeableTable):
         __tablename__ = 'ORDERS'
         RELATIONSHIPS_TO_DICT = True
