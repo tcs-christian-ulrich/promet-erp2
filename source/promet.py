@@ -118,6 +118,19 @@ with warnings.catch_warnings():
         Country = Column("COUNTRY",String(3))
         Postbox = Column("POBOX",Integer)
         AccountNo = Column("ACCOUNTNO",String(20))
+    class OrderQMTest(Table,TimestampTable):
+        __tablename__ = 'ORDERQMTEST'
+        RELATIONSHIPS_TO_DICT = True
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        RefId = Column('REF_ID',Integer, ForeignKey('ORDERPOS.SQL_ID'))
+        Name = Column('NAME', String(20))
+        Result = Column('RESULT', String(1))
+        Notes = Column('NOTES', String(convert_unicode=True))
+        RawData = Column('RAWDATA', String(convert_unicode=True))
+        Testtime = Column('TESTTIME', DateTime)
+        Testend = Column('TESTEND', DateTime)
+        Serial = Column('SERIAL', String(30))
+        Duration = Column('DURATION', Integer)
     class OrderPosition(Table,BasicChangeableTable):
         __tablename__ = 'ORDERPOS'
         RELATIONSHIPS_TO_DICT = True
@@ -173,6 +186,7 @@ with warnings.catch_warnings():
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
+        QMTests = relationship(OrderQMTest, lazy='joined')
     class Order(Table,BasicChangeableTable):
         __tablename__ = 'ORDERS'
         RELATIONSHIPS_TO_DICT = True
