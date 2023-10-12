@@ -187,6 +187,25 @@ with warnings.catch_warnings():
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
         QMTests = relationship(OrderQMTest, lazy='joined')
+    class Person(Table,BasicChangeableTable):
+        __tablename__ = 'CUSTOMERS'
+        RELATIONSHIPS_TO_DICT = True
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Accountno=Column("ACCOUNTNO",String(200),nullable=False)
+        MatchCode=Column("MATCHCODE",String(200))
+        Status=Column("STATUS",String(4))
+        Name=Column("NAME",String(240))
+        Treeentry=Column("TREEENTRY",Integer)
+        Discount=Column("DISCOUNT",Float)
+        DiscountGr=Column("DISCOUNTGR",String(2))
+        DefPrice=Column("DEFPRICE",String(3))
+        Language=Column("LANGUAGE",String(3))
+        Currency=Column("CURRENCY",String(5))
+        EAccounty=Column("EACCOUNT",String(20))
+        PaymentTar=Column("PAYMENTTAR",String(2))
+        Type=Column("TYPE",String(1),nullable=False)
+        Info=Column("INFO",String)
+        Category=Column("CATEGORY",String(60))
     class Order(Table,BasicChangeableTable):
         __tablename__ = 'ORDERS'
         RELATIONSHIPS_TO_DICT = True
@@ -289,6 +308,19 @@ with warnings.catch_warnings():
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
+    class AccountingJournal(Table,TimestampTable):
+        __tablename__ = 'ACCOUNTINGJOURNAL'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Type = Column('TYPE',String(1))
+        OrderNo = Column('ORDERNO',Integer, nullable=False)
+        Status = Column('STATUS',String(3), nullable=False)
+        Date = Column('DATE',DateTime)
+        OrigDate = Column('ODATE',DateTime)
+        Number = Column('NUMBER',String(20))
+        CustNo = Column('CUSTNO', String(20))
+        CustName = Column("CUSTNAME",String(200,convert_unicode=True))
+        Currency = Column("CURRENCY",String(5))
+        Account=Column("ACCOUNT",String(200,convert_unicode=True))
     class Masterdata(Table,BasicChangeableTable):
         __tablename__ = 'MASTERDATA'
         RELATIONSHIPS_TO_DICT = True
@@ -370,6 +402,28 @@ with warnings.catch_warnings():
         id = Column('SQL_ID',BigInteger, primary_key=True)
         Name=Column("NAME",String(100,convert_unicode=True),nullable=False)
         Text=Column("TEXT",String(convert_unicode=True))
+    class DocPages(Table,TimestampTable):
+        __tablename__ = 'DOCPAGES'
+        RELATIONSHIPS_TO_DICT = True
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Name=Column("NAME",String(100,convert_unicode=True),nullable=False)
+        Tags=Column("TAGS",String(100,convert_unicode=True),nullable=False)
+        OrigDate=Column("ORIGDATE",DateTime,nullable=False)
+        Typ=Column("TYPE",String(1),nullable=False)
+    class Documents(Table,TimestampTable):
+        __tablename__ = 'DOCUMENTS'
+        RELATIONSHIPS_TO_DICT = True
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        ref_id = Column('REF_ID_ID',BigInteger,nullable=False)
+        Typ=Column("TYPE",String(1),nullable=False)
+        IsDir=Column("ISDIR",String(1),nullable=False)
+        IsLink=Column("ISLINK",String(1))
+        Name=Column("NAME",String(100,convert_unicode=True),nullable=False)
+        Parent = Column('PARENT',BigInteger)
+        Number = Column('NUMBER',BigInteger,nullable=False)
+        Extension=Column("EXTENSION",String(20,convert_unicode=True))
+        Text=Column("FULLTEXT",String(convert_unicode=True))
+        Document=Column("DOCUMENT",sqlalchemy.types.BLOB)
     class NumberRange(Table,BasicCreateableTable):
         __tablename__ = 'NUMBERRANGES'
         RELATIONSHIPS_TO_DICT = True
@@ -389,6 +443,63 @@ with warnings.catch_warnings():
         UserName=Column("USERNAME",String(400,convert_unicode=True))
         Password=Column("PASSWORD",String(400,convert_unicode=True))
         Date=Column("DATE",DateTime)
+    class AccountExchange(Table,TimestampTable):
+        __tablename__ = 'ACCOUNTEXCHANGE'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        ref_id = Column('REF_ID',BigInteger,ForeignKey('ACCOUNTS.SQL_ID'))
+        Typ = Column('TYPE',String(1))
+        RemoteSortCode=Column("RSORTCODE",String(200,convert_unicode=True))
+        RemoteAccountno=Column("RACCOUNTNO",String(200,convert_unicode=True))
+        Value = Column("VALUE",Float)
+        Ballance = Column("BALLANCE",Float)
+        Currency = Column("CURRENCY",String(5))
+        Date=Column("DATE",DateTime)
+        ValueDate=Column("VALUEDATE",DateTime)
+        Name=Column("NAME",String(200,convert_unicode=True))
+        Purpose=Column("PURPOSE",String(convert_unicode=True))
+        Checked = Column('CHECKED',String(1))
+        Category = Column('CATEGORY',String(200))
+    class Accounts(Table,TimestampTable):
+        __tablename__ = 'ACCOUNTS'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Type = Column('TYPE',String(1))
+        Name=Column("NAME",String(200,convert_unicode=True))
+        SortCode=Column("SORTCODE",String(200,convert_unicode=True))
+        Accountno=Column("ACCOUNTNO",String(200,convert_unicode=True))
+        Notes=Column("NOTES",String(convert_unicode=True))
+        FTSName=Column("FTSNAME",String(convert_unicode=True))
+        Exchanges = relationship(AccountExchange, lazy='joined', order_by="AccountExchange.ValueDate")
+    class MeasData(Table,TimestampTable):
+        __tablename__ = 'MEASDATA'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        ref_id = Column('REF_ID',BigInteger,ForeignKey('MEASUREMENTS.SQL_ID'))
+        Value = Column('DATA',Float)
+        Date=Column("DATE",DateTime)
+    class Measuremnents(Table,TimestampTable):
+        __tablename__ = 'MEASUREMENTS'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        ref_id = Column('REF_ID',BigInteger,ForeignKey('ALLOBJECTS.SQL_ID'))
+        Name=Column("NAME",String(200,convert_unicode=True))
+        Typ=Column("TYPE",String(1))
+        ID=Column("ID",String(200,convert_unicode=True))
+        MeasData = relationship(MeasData, order_by="MeasData.TimestampD")
+    class AllObjects(Table,TimestampTable):
+        __tablename__ = 'ALLOBJECTS'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Number = Column('NUMBER',Integer)
+        Name=Column("NAME",String(200,convert_unicode=True))
+        #MatchCode=Column("MATCHCODE",String(100))
+        Link=Column("LINK",String(240))
+        Measurements = relationship(Measuremnents, order_by="Measuremnents.TimestampD")
+    """
+    class Objects(Table,TimestampTable):
+        __tablename__ = 'OBJECTS'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Number = Column('NUMBER',Integer)
+        Name=Column("NAME",String(200,convert_unicode=True))
+        MatchCode=Column("MATCHCODE",String(100))
+        Link=Column("LINK",String(240))
+    """
 def GetID(session):
     nid = None
     try:
