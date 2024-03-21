@@ -112,6 +112,7 @@ with warnings.catch_warnings():
         Tags = Column('TAGS',String(200))
         Commission = Column('COMMISSION',String(250))
         Summary = Column('SUMMARY',String(220))
+        ChangedBy = Column("CHANGEDBY",String(4))
     class OrderAddress(Table,TimestampTable):
         __tablename__ = 'ORDERADDR'
         id = Column('SQL_ID',BigInteger, primary_key=True)
