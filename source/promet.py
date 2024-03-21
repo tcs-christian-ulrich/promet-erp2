@@ -128,6 +128,19 @@ with warnings.catch_warnings():
         Country = Column("COUNTRY",String(3))
         Postbox = Column("POBOX",Integer)
         AccountNo = Column("ACCOUNTNO",String(20))
+    class OrderQMTest(Table,TimestampTable):
+        __tablename__ = 'ORDERQMTEST'
+        RELATIONSHIPS_TO_DICT = True
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        RefId = Column('REF_ID',Integer, ForeignKey('ORDERPOS.SQL_ID'))
+        Name = Column('NAME', String(20))
+        Result = Column('RESULT', String(1))
+        Notes = Column('NOTES', String(convert_unicode=True))
+        RawData = Column('RAWDATA', String(convert_unicode=True))
+        Testtime = Column('TESTTIME', DateTime)
+        Testend = Column('TESTEND', DateTime)
+        Serial = Column('SERIAL', String(30))
+        Duration = Column('DURATION', Integer)
     class OrderPosition(Table,BasicChangeableTable):
         __tablename__ = 'ORDERPOS'
         RELATIONSHIPS_TO_DICT = True
@@ -183,6 +196,26 @@ with warnings.catch_warnings():
         ScriptFunc = Column("SCRIPTFUNC",String(60))
         PRScriptFunc = Column("PRSCRIPTFUNC",String(160))
         ImageRef = Column("IMAGEREF",Integer)
+        QMTests = relationship(OrderQMTest, lazy='joined')
+    class Person(Table,BasicChangeableTable):
+        __tablename__ = 'CUSTOMERS'
+        RELATIONSHIPS_TO_DICT = True
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        Accountno=Column("ACCOUNTNO",String(200),nullable=False)
+        MatchCode=Column("MATCHCODE",String(200))
+        Status=Column("STATUS",String(4))
+        Name=Column("NAME",String(240))
+        Treeentry=Column("TREEENTRY",Integer)
+        Discount=Column("DISCOUNT",Float)
+        DiscountGr=Column("DISCOUNTGR",String(2))
+        DefPrice=Column("DEFPRICE",String(3))
+        Language=Column("LANGUAGE",String(3))
+        Currency=Column("CURRENCY",String(5))
+        EAccounty=Column("EACCOUNT",String(20))
+        PaymentTar=Column("PAYMENTTAR",String(2))
+        Type=Column("TYPE",String(1),nullable=False)
+        Info=Column("INFO",String)
+        Category=Column("CATEGORY",String(60))
     class Order(Table,BasicChangeableTable):
         __tablename__ = 'ORDERS'
         RELATIONSHIPS_TO_DICT = True
