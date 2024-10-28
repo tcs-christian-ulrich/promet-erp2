@@ -4,10 +4,10 @@ import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative,hashlib,sqlalc
 from typing import Text
 from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
 from sqlalchemy import create_engine
-from sqlalchemy.orm import relation, relationship, sessionmaker
+from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
 import json,threading,urllib.parse,uuid
-Table = sqlalchemy.ext.declarative.declarative_base()
+Table = sqlalchemy.orm.declarative_base()
 session = None
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -108,10 +108,10 @@ with warnings.catch_warnings():
         RefId = Column('REF_ID',Integer, ForeignKey('ORDERS.SQL_ID'))
         Type = Column("TYPE",String(3))
         Title = Column("TITLE",String(8))
-        Name = Column("NAME",String(200,convert_unicode=True))
+        Name = Column("NAME",String(200))
         CName = Column("CNAME",String(30))
-        Additional = Column("ADDITIONAL",String(200,convert_unicode=True))
-        Address = Column("ADDRESS",String(convert_unicode=True))
+        Additional = Column("ADDITIONAL",String(200))
+        Address = Column("ADDRESS",String())
         City = Column("CITY",String(30))
         Zip = Column("ZIP",String(8))
         State = Column("STATE",String(30))
@@ -131,8 +131,8 @@ with warnings.catch_warnings():
         Version = Column("VERSION",String(25))
         Language = Column("LANGUAGE",String(3))
         TextType = Column("TEXTTYPE",String(1))
-        Shorttext = Column("SHORTTEXT",String(200,convert_unicode=True))
-        Text = Column("TEXT",String(convert_unicode=True))
+        Shorttext = Column("SHORTTEXT",String(200))
+        Text = Column("TEXT",String())
         Storage = Column("STORAGE",String(3))
         Serial = Column("SERIAL",String(20))
         Weight = Column("WEIGHT",Float)
@@ -183,7 +183,7 @@ with warnings.catch_warnings():
         Date = Column('DATE',DateTime)
         Number = Column('NUMBER',String(20))
         CustNo = Column('CUSTNO', String(20))
-        CustName = Column("CUSTNAME",String(200,convert_unicode=True))
+        CustName = Column("CUSTNAME",String(200))
         DateQuery = Column("DOAFQ",DateTime)
         DateWish = Column("DWISH",DateTime)
         DateApproved = Column("DAPPR",DateTime)
@@ -233,8 +233,8 @@ with warnings.catch_warnings():
         Version = Column("VERSION",String(25))
         Language = Column("LANGUAGE",String(3))
         TextType = Column("TEXTTYPE",String(1))
-        Shorttext = Column("SHORTTEXT",String(200,convert_unicode=True))
-        Text = Column("TEXT",String(convert_unicode=True))
+        Shorttext = Column("SHORTTEXT",String(200))
+        Text = Column("TEXT",String())
         Storage = Column("STORAGE",String(3))
         Serial = Column("SERIAL",String(20))
         Weight = Column("WEIGHT",Float)
@@ -354,26 +354,26 @@ with warnings.catch_warnings():
         __tablename__ = 'BOILERPLATE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
-        Name=Column("NAME",String(100,convert_unicode=True),nullable=False)
-        Text=Column("TEXT",String(convert_unicode=True))
+        Name=Column("NAME",String(100),nullable=False)
+        Text=Column("TEXT",String())
     class NumberRange(Table,BasicCreateableTable):
         __tablename__ = 'NUMBERRANGES'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
-        Tablename=Column("TABLENAME",String(25,convert_unicode=True),nullable=False)#Numberset
-        Pool=Column("POOL",String(25,convert_unicode=True))#Numberpool
+        Tablename=Column("TABLENAME",String(25),nullable=False)#Numberset
+        Pool=Column("POOL",String(25))#Numberpool
         Start=Column("START",BigInteger,nullable=False)
         Stop=Column("STOP",BigInteger,nullable=False)
-        Use=Column("USE",String(200,convert_unicode=True))
-        Notice=Column("NOTICE",String(convert_unicode=True))
+        Use=Column("USE",String(200))
+        Notice=Column("NOTICE",String())
     class PasswordSave(Table,TimestampTable):
         __tablename__ = 'PWSAVE'
         RELATIONSHIPS_TO_DICT = True
         id = Column('SQL_ID',BigInteger, primary_key=True)
-        Name=Column("NAME",String(200,convert_unicode=True))
-        Site=Column("SITE",String(500,convert_unicode=True))
-        UserName=Column("USERNAME",String(400,convert_unicode=True))
-        Password=Column("PASSWORD",String(400,convert_unicode=True))
+        Name=Column("NAME",String(200))
+        Site=Column("SITE",String(500))
+        UserName=Column("USERNAME",String(400))
+        Password=Column("PASSWORD",String(400))
         Date=Column("DATE",DateTime)
 def GetID(session):
     nid = None
