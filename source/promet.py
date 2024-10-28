@@ -2,7 +2,7 @@ import sys,os;sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from datetime import datetime
 import logging,warnings,sys,pathlib,os,sqlalchemy.ext.declarative,hashlib,sqlalchemy.event
 from typing import Text
-from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update
+from sqlalchemy import Column, ForeignKey, Integer, BigInteger, String, func, update, SmallInteger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import relationship, sessionmaker
 from sqlalchemy.sql.sqltypes import DateTime, Float
@@ -101,6 +101,17 @@ with warnings.catch_warnings():
     class BasicCreateableTable(TimestampTable):
         CreatedBy = Column("CREATEDBY",String(4))
     class BasicChangeableTable(BasicCreateableTable):
+        ChangedBy = Column("CHANGEDBY",String(4))
+    class History(Table,TimestampTable):
+        __tablename__ = 'HISTORY'
+        id = Column('SQL_ID',BigInteger, primary_key=True)
+        RefId = Column('REF_ID',BigInteger)
+        Action = Column('ACTION',String(1500))
+        ActionIcon = Column('ACTIONICON',SmallInteger)
+        Link = Column('LINK',String(400))
+        Tags = Column('TAGS',String(200))
+        Commission = Column('COMMISSION',String(250))
+        Summary = Column('SUMMARY',String(220))
         ChangedBy = Column("CHANGEDBY",String(4))
     class OrderAddress(Table,TimestampTable):
         __tablename__ = 'ORDERADDR'
